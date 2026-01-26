@@ -1,0 +1,150 @@
+from sqlmodel import select, delete
+from fastapi import HTTPException
+from sqlmodel.ext.asyncio.session import AsyncSession
+from src.services import user
+from src.models import Roles_Permission
+from src.models.User import User
+from src.models.Permission import Permission
+from src.models.User_Permission import User_Permission
+from src.schemas.manager import PermissionAction, UserStatusUpdate, LimitPermissionRequest
+from src.models.Comment import Comment
+
+class Manager:
+
+
+
+
+    @staticmethod
+    async def _get_target_user(db: AsyncSession, user_id: int) -> User:
+        statement = select(User).where(User.user_id == user_id)
+        result = await db.exec(statement)
+        user = result.first()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="هذا المستخدم غير موجود في النظام")
+        
+        if user.roles_id in [1, 2]:
+            raise HTTPException(
+                status_code=403, 
+                detail="لا يمكن إجراء هذه العملية على حسابات الإدارة (آدمن/مدير)"
+            )
+        
+        return user
+    
+
+    @staticmethod
+    async def update_user_status(db: AsyncSession, data: UserStatusUpdate):
+        user = await Manager._get_target_user(db, data.user_id)
+
+        status_map = {1: "نشط", 2: "معلق", 3: "محظور"}
+        if data.target_state not in status_map:
+            raise HTTPException(
+                status_code=400,
+                detail="قيمة الحالة غير صحيحة"
+            )
+        user.state_id = data.target_state
+        await db.commit()
+        await db.refresh(user)
+
+        return {
+            "message": f"تم تغيير حالة المستخدم إلى {status_map[data.target_state]}",
+            "user_id": user.user_id,
+            "new_state": user.state_id
+        }
+
+    
+    
+    @staticmethod
+    async def delete_user(db: AsyncSession, user_id: int):
+        user = await Manager._get_target_user(db, user_id)
+        
+        await db.delete(user)
+        await db.commit()
+        
+        return {"message": "تم حذف المستخدم نهائياً", "user_id": user_id}
+
+   
+    @staticmethod
+    async def toggle_user_permission(db: AsyncSession, data: LimitPermissionRequest):
+        await Manager._get_target_user(db, data.user_id)
+
+        stmt = select(User_Permission).where(
+            User_Permission.user_id == data.user_id,
+            User_Permission.permission_id == data.permission_id
+        )
+        existing = (await db.exec(stmt)).first()
+
+        # 3. معالجة الأكشن بناءً على الـ Enum
+        if data.action == PermissionAction.block:
+            if existing:
+                raise HTTPException(status_code=400, detail="المستخدم ممنوع مسبقاً")
+            
+            new_entry = User_Permission(user_id=data.user_id, permission_id=data.permission_id)
+            db.add(new_entry)
+            await db.commit()
+            return {"status": "success", "message": "تم المنع بنجاح"}
+
+        elif data.action == PermissionAction.unblock:
+            if not existing:
+                raise HTTPException(status_code=400, detail="المستخدم غير ممنوع أصلاً")
+            
+            await db.delete(existing)
+            await db.commit()
+            return {"status": "success", "message": "تم إلغاء المنع بنجاح"}
+
+    @staticmethod
+    async def get_user_permissions(db: AsyncSession, user_id: int):
+        statement = select(User).where(User.user_id == user_id)
+        result = await db.exec(statement)
+        target_user = result.first()
+
+        if not target_user:
+            raise HTTPException(status_code=404, detail="المستخدم غير موجود")
+        if target_user.roles_id not in [3, 4]:
+            raise HTTPException(status_code=403, detail="لا يمكنك عرض تقرير صلاحيات لهذا المستوى")
+
+        role_perms_stmt = (
+            select(Permission)
+            .join(Roles_Permission)
+            .where(Roles_Permission.role_id == target_user.roles_id)
+        )
+        role_permissions = (await db.exec(role_perms_stmt)).all()
+
+        custom_perms_stmt = select(User_Permission).where(User_Permission.user_id == user_id)
+        custom_perms = (await db.exec(custom_perms_stmt)).all()
+    
+
+        return {
+            "user_info": {
+                "name": target_user.name, 
+                "role": "أستاذ" if target_user.roles_id == 3 else "طالب"
+            },
+            "all_type_permissions": [
+                {
+                    "permission_id": p.permission_id,
+                    "name": p.name,
+                    "default_status": "مسموح للنوع"
+                } for p in role_permissions
+            ],
+            "restrictions": [
+                {
+                    "permission_id": p.permission_id,
+                    "name": p.permission.name,
+                    "status": "محظور"
+                } for p in custom_perms
+        ]
+    }
+       
+    
+    @staticmethod
+    async def delete_comment(db: AsyncSession, comment_id: int):
+        stmt = select(Comment).where(Comment.comment_id == comment_id)
+        result = await db.exec(stmt)
+        comment = result.first()
+
+        if not comment:
+            raise HTTPException(status_code=404, detail="التعليق غير موجود أو تم حذفه مسبقاً")
+
+        await db.delete(comment)
+        await db.commit()
+        return {"message": "تم حذف التعليق بنجاح بواسطة الإدارة", "comment_id": comment_id}

@@ -1,8 +1,6 @@
-from unittest import result
 from sqlmodel import select
 from fastapi import HTTPException, status
 from sqlmodel.ext.asyncio.session import AsyncSession
-from src.models import Permission
 from src.models.Permission import Permission
 from src.models.Roles_Permission import Roles_Permission
 from src.routers import user
@@ -63,7 +61,6 @@ class AdminService:
                 detail="هذا الإيميل مسجل مسبقاً كمستخدم فعلي"
             )
 
-        # 2. البحث عن دعوة سابقة لنفس الإيميل
         statement = select(Invitation).where(Invitation.email == data.email)
         result = await db.exec(statement)
         existing_invite = result.first()
@@ -71,7 +68,6 @@ class AdminService:
         current_now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         if existing_invite:
-            # إذا كانت الدعوة صالحة ولم تُستخدم، نرفض التكرار
             if existing_invite.expires_at > current_now and not existing_invite.is_used:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -125,7 +121,6 @@ class AdminService:
                 status_code=403, 
                 detail="لا يمكنك تعديل صلاحيات الطلبة أو الأساتذة من هنا"
             )
-    # 3. التعديل
         user.roles_id = new_role_id
         await db.commit()
         return {"message": "تم تحديث الصلاحيات بنجاح"}

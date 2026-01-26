@@ -4,6 +4,7 @@ from src.routers import users as users_router
 from src.routers import login as login_router
 from src.routers import user as user_router
 from src.routers import admin as admin_router
+from src.routers import manager as manager_router
 
 from src.routers import interaction as interaction_router
 
@@ -44,3 +45,9 @@ app.include_router(
     prefix="/api/v1/profile", 
     tags=["My Profile"]
 )
+app.include_router(
+    manager_router.router,
+    prefix="/api/v1/manager", 
+    tags=["Manager Operations"] 
+)
+

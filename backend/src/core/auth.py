@@ -6,6 +6,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import selectinload
 from jose import JWTError
+from src.models import Permission
 from src.models.Roles import Roles
 from src.models.Roles_Permission import Roles_Permission
 from src.models.User_Permission import User_Permission
@@ -89,24 +90,19 @@ class PermissionChecker:
                 detail=f"not valid({current_user.roles.roles_name})"
             )
 
-        stmt = select(User_Permission).where(
-            User_Permission.user_id == current_user.user_id,
-            User_Permission.is_granted == False 
-        ).join(User_Permission.permission).where(
-            User_Permission.permission.has(name=self.required_permission)
+        stmt = select(User_Permission).join(Permission).where(
+        User_Permission.user_id == current_user.user_id,
+            Permission.name == self.required_permission
         )
-        
-       
-        
+
         result = await db.exec(stmt)
         blacklisted = result.first()
-
-
 
         if blacklisted:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"تم حظرك من استخدام صلاحية ({self.required_permission}) بسبب مخالفة القوانين"
+                detail=f"تم حظرك من استخدام صلاحية ({self.required_permission})"
+
             )
 
         return current_user

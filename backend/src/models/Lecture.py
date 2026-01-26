@@ -34,5 +34,5 @@ class Lecture(SQLModel , table = True) :
 
     __table_args__ = (
 
-        Index("idx_lecture_course_user", "course_id", "user_id")
+        Index("idx_lecture_course_user", "course_id", "user_id"),
         )
