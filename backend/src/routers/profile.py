@@ -6,7 +6,7 @@ from src.schemas.profile import ProfileRead, ProfileUpdate
 from src.services.profile import ProfileService
 from src.models.User import User
 
-allow_profile = PermissionChecker("Manage Profile")
+allow_profile = PermissionChecker(["Manage Profile"])
 router = APIRouter(
     dependencies=[Depends(allow_profile)]
 )

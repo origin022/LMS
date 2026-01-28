@@ -74,11 +74,9 @@ class AdminService:
                     detail="هذا الإيميل لديه دعوة صالحة حالياً"
                 )
             
-            # إذا كانت منتهية أو مستخدمة، نحذفها لنبدأ من جديد
             await db.delete(existing_invite)
             await db.commit()
 
-        # 3. إنشاء الدعوة الجديدة
         if not data.role_id:
             raise HTTPException(
             status_code=400,

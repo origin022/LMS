@@ -26,7 +26,7 @@ async def update_user_status(
 async def delete_user(
     user_id: int, 
     db: AsyncSession = Depends(get_session),
-    current_user = Depends(PermissionChecker("Delete user"))
+    current_user = Depends(PermissionChecker(["Delete user"]))
 
 ):
     return await Manager.delete_user(db, user_id)
@@ -35,7 +35,7 @@ async def delete_user(
 async def get_permissions_dashboard(
     user_id: int, 
     db: AsyncSession = Depends(get_session),
-    current_user = Depends(PermissionChecker("view users"))
+    current_user = Depends(PermissionChecker(["view users"]))
 ):
     return await Manager.get_user_permissions(db, user_id)
 
@@ -43,7 +43,7 @@ async def get_permissions_dashboard(
 async def toggle_permission(
     data: LimitPermissionRequest, 
     db: AsyncSession = Depends(get_session),
-    current_user = Depends(PermissionChecker("Limiting permission"))
+    current_user = Depends(PermissionChecker(["Limiting permission"]))
 
 ):
     return await Manager.toggle_user_permission(db, data)
@@ -52,7 +52,6 @@ async def toggle_permission(
 async def delete_comment(
     comment_id: int, 
     db: AsyncSession = Depends(get_session),
-    current_user = Depends(PermissionChecker("Delete Comment"))
-
+    current_user = Depends(PermissionChecker(["Delete Comment"]))
 ):
     return await Manager.delete_comment(db, comment_id)

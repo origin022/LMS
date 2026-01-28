@@ -13,7 +13,7 @@ router = APIRouter(prefix="/interactions", tags=["Interactions"])
 async def create_comment(
     data: CommentCreate, 
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(PermissionChecker("Comment")) 
+    current_user: User = Depends(PermissionChecker(["Comment"])) 
 ):
     return await service.add_comment(db, data, current_user)
 
@@ -31,6 +31,6 @@ async def get_comments(
 async def like_lecture(
     data: LikeToggle, 
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(PermissionChecker("Like"))
+    current_user: User = Depends(PermissionChecker(["Like"]))
 ):
     return await service.toggle_like(db, data.lecture_id, current_user)

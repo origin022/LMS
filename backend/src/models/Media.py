@@ -1,4 +1,4 @@
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import DateTime, SQLModel, Field, Relationship
 from typing import TYPE_CHECKING, Optional
 from sqlalchemy import Column, LargeBinary  
 from datetime import datetime, timezone
@@ -15,7 +15,13 @@ class Media(SQLModel, table=True):
         sa_column=Column(LargeBinary, nullable=False)
     ) 
     mime_type: str = Field(nullable=False)  
+    created_at: datetime = Field(
+    sa_column=Column(
+    DateTime(timezone=True),
+    nullable=False
+    ),
+    default_factory=lambda: datetime.now(timezone.utc)
+)
     
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     lecture: "Lecture" = Relationship(back_populates="media")

@@ -65,7 +65,7 @@ async def get_current_user(
 
 
 class PermissionChecker:
-    def __init__(self, required_permission: str):
+    def __init__(self, required_permission: list[str]):
         self.required_permission = required_permission
 
     async def __call__(
@@ -84,7 +84,7 @@ class PermissionChecker:
             for rp in current_user.roles.roles_permission:
                 user_role_permissions.append(rp.permission.name)
 
-        if self.required_permission not in user_role_permissions:
+        if not any(permission in user_role_permissions for permission in self.required_permission):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"not valid({current_user.roles.roles_name})"
@@ -92,7 +92,7 @@ class PermissionChecker:
 
         stmt = select(User_Permission).join(Permission).where(
         User_Permission.user_id == current_user.user_id,
-            Permission.name == self.required_permission
+            Permission.name in (self.required_permission)
         )
 
         result = await db.exec(stmt)

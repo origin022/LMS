@@ -15,14 +15,13 @@ from src.services.admin import AdminService
 
 router = APIRouter(prefix="/admin")
 
-check_add_class = PermissionChecker("create classroom")
-check_delete_class = PermissionChecker("delete classroom") 
-INVITE_MANAGER = PermissionChecker("Add Manager") 
-check_view_class = PermissionChecker("view classrooms")
+check_add_class = PermissionChecker(["create classroom"])
+check_delete_class = PermissionChecker(["delete classroom"]) 
+INVITE_MANAGER = PermissionChecker(["Add Manager"]) 
 
-VIEW_USERS = PermissionChecker("view users")
-CHANGE_PERMISSION = PermissionChecker("Change Permission")
-DELETE_MANAGER = PermissionChecker("Delete Manager")
+VIEW_USERS = PermissionChecker(["view users"])
+CHANGE_PERMISSION = PermissionChecker(["Change Permission"])
+DELETE_MANAGER = PermissionChecker(["Delete Manager"])
 
 
 @router.post("/classroom/create", response_model=ClassroomRead, status_code=status.HTTP_201_CREATED)
@@ -107,9 +106,3 @@ async def deactivate_manager(
 ):
     return await AdminService.deactivate_manager(db, manager_id)
 
-@router.get("/classrooms", response_model=List[ClassroomRead])
-async def get_all_classrooms(
-    db: AsyncSession = Depends(get_session),
-    current_user = Depends(check_view_class)
-):
-    return await AdminService.get_all_classrooms(db)
