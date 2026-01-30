@@ -103,7 +103,7 @@ class OptionRead(BaseModel):
     option_test: str
     question_id: int
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 

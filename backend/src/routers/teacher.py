@@ -1,7 +1,6 @@
-from fastapi import APIRouter, Depends, UploadFile, File, status  ,HTTPException
+from fastapi import APIRouter, Depends,  status  
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.models import Media
 from src.core.auth import PermissionChecker
 from src.core.dep import get_session
 from src.services.teacher import TeacherService

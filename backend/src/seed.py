@@ -10,14 +10,14 @@ from src.core.dep import engine
 
 REQUIRED_PERMISSIONS = ["Publish", "Like", "Comment", "Delete Comment", "Assign Quiz", "Add Teacher", "Delete user", "Add Manager", "Delete Manager",
                          "Change Permission","Manage Profile","create classroom","delete classroom","view users","view classrooms",
-                         "Limiting permission","Ban User","Quiz attempt","show attempted quiz","manage corse"]
+                         "Limiting permission","Ban User","Quiz attempt","show attempted quiz","manage corse","view enrollments"]
 REQUIRED_ROLES = ["Super Admin", "Manager", "Teacher", "Student"]
 REQUIRED_STATES = ["Active", "Pending", "Banned"]
 ROLE_PERMISSIONS_MAP = {
     "Super Admin": ["Add Manager", "Delete Manager","Change Permission","create classroom","delete classroom","view users","view classrooms"],
     "Manager": ["Add Teacher", "Delete user", "Delete Comment","Limiting permission","Ban User","view users"],
     "Teacher": ["Publish", "Assign Quiz", "Comment", "Like","Manage Profile","show attempted quiz","manage corse"],
-    "Student": ["Like", "Comment", "Manage Profile","Quiz attempt"],
+    "Student": ["Like", "Comment", "Manage Profile","Quiz attempt","view enrollments"],
 }
 
 async def initial_setup():

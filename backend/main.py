@@ -6,8 +6,8 @@ from src.routers import user as user_router
 from src.routers import admin as admin_router
 from src.routers import manager as manager_router
 from src.routers import teacher as teacher_router
-
 from src.routers import interaction as interaction_router
+from src.routers import student as student_router
 
 app = FastAPI(
     title="LMS API",
@@ -55,5 +55,9 @@ app.include_router(
 app.include_router(
     teacher_router.router,
     prefix="/api/v1/teacher", 
+)
+app.include_router(
+    student_router.router,
+    prefix="/api/v1/student",
 )
 

@@ -18,7 +18,7 @@ class ClassroomRead(BaseModel):
 
 class InvitationCreate(BaseModel):
     email: EmailStr
-    role_id: Optional[int] = None
+    role_id: int
     custom_message: Optional[str] = "يسرنا إعلامك بأنه قد تم قبولك للانضمام إلى فريق الإدارة."
 
 class InvitationResponse(BaseModel):
