@@ -23,7 +23,6 @@ class EmailService:
        
         EmailService._setup_gmail()
         
-        # بناء الرابط ديناميكياً حسب المسار المطلوب
         magic_link = f"http://localhost:3000/{route}?token={token}"
         
         gmail.send(
@@ -36,7 +35,6 @@ class EmailService:
         )
     @staticmethod
     async def verify_user_email(token: str, db: AsyncSession):
-        # 1. البحث عن التوكن (Modern SQLModel)
         statement = select(VerificationToken).where(VerificationToken.token == token)
         result = await db.exec(statement)
         token_record = result.first()
@@ -52,7 +50,6 @@ class EmailService:
             raise HTTPException(status_code=400, detail="الرابط منتهي الصلاحية")
 
 
-        # 2. جلب المستخدم وتعديل حالته
         user_statement = select(User).where(User.email == token_record.email)
         user_result = await db.exec(user_statement)
         user = user_result.first()
@@ -60,18 +57,16 @@ class EmailService:
         if not user:
             raise HTTPException(status_code=404, detail="المستخدم غير موجود")
 
-        # 3. المنطق الخاص بك (1 للطالب، 2 للأستاذ معلق)
-        if user.roles_id == 4:  # طالب
+        if user.roles_id == 4: 
             user.state_id = 1
             msg = "تم تفعيل حسابك كطالب بنجاح!"
-        elif user.roles_id == 3:  # أستاذ
+        elif user.roles_id == 3:  
             user.state_id = 2
             msg = "تم تأكيد إيميلك، بانتظار موافقة المدير."
         else:
             user.state_id = 2
             msg = "تم تأكيد الإيميل."
 
-        # 4. تنظيف وحفظ
         await db.delete(token_record)
         await db.commit()
         return {"message": msg, "state_id": user.state_id}

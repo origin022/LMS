@@ -6,7 +6,7 @@ if TYPE_CHECKING:
 
 
 class Teacher_Assignment(SQLModel , table = True):
-    teacher_id :int|None = Field (primary_key= True ,foreign_key="user.user_id")
+    user_id :int|None = Field (primary_key= True ,foreign_key="user.user_id")
     class_id :int|None = Field( foreign_key='classroom.class_id', index=True)
 
     classroom : "Classroom" = Relationship(back_populates="teacher_assignment")

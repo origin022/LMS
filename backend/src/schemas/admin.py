@@ -1,8 +1,8 @@
-from pydantic import BaseModel, Field
+from datetime import datetime
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 
-from sqlmodel import SQLModel
 
 class ClassroomCreate(BaseModel):
     name: str = Field(..., min_length=3, max_length=20)
@@ -11,8 +11,8 @@ class ClassroomRead(BaseModel):
     class_id: int
     class_name: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 
 
@@ -26,8 +26,31 @@ class InvitationResponse(BaseModel):
     email: str
 
     
+class GetUsersResponse(BaseModel):
+    name :str
+    created_at:datetime
+    email:str
+    phone:str
+    roles_name:str
+    state_name:str
 
 
-class RoleCreateWithPermissions(SQLModel):
+class RoleCreateWithPermissions(BaseModel):
     roles_name: str
-    permission_ids: List[int] = Field(default_factory=list)
+    permission_id: List[int] = Field(default_factory=list)
+
+class ClassroomRead(BaseModel):
+    class_id: int
+    class_name: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+
+
+class ClassroomUpdate(BaseModel):
+    class_name: Optional[str] = None 
+
+class RoleUpdate(BaseModel):
+    roles_name: Optional[str] = None
+    permission_id: Optional[List[int]] = None

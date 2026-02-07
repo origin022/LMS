@@ -1,12 +1,13 @@
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status,Response
 from starlette.concurrency import run_in_threadpool
 from sqlalchemy.orm import selectinload
+from src.core.config import config
 from src.models.User import User
-from src.core.security import verify_password, create_access_token 
+from src.core.security import create_refresh_token, verify_password, create_access_token 
 
-async def login_user(email: str, password: str, db: AsyncSession):
+async def login_user(email: str, password: str, db: AsyncSession, response: Response):
     statement = (
         select(User)
         .where(User.email == email)
@@ -14,44 +15,49 @@ async def login_user(email: str, password: str, db: AsyncSession):
     )
     
     result = await db.exec(statement)
-    user = result.first()
+    db_user = result.first() 
 
-    if not user:
+    if not db_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="الإيميل أو كلمة المرور غير صحيحة",
         )
 
-    # 1. التحقق من الباسورد
-    is_valid = await run_in_threadpool(verify_password, password, user.hashed_passwored)
+    is_valid = await run_in_threadpool(verify_password, password, db_user.hashed_passwored)
     if not is_valid:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="الإيميل أو كلمة المرور غير صحيحة",
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="خطأ في البيانات")
 
-    
-    if user.state_id != 1:
-        if user.state_id == 2:
-            detail_msg = "حسابك بانتظار التفعيل. يرجى التأكد من بريدك الإلكتروني."
-        elif user.state_id == 3:
-            detail_msg = "تم حظر هذا الحساب، يرجى التواصل مع الإدارة."
-        else:
-            detail_msg = "حسابك غير نشط حالياً."
-            
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
-            detail=detail_msg
-        )
+    if db_user.state_id != 1:
+        raise HTTPException(status_code=403, detail="الحساب غير نشط")
 
-    token = create_access_token(data={"sub": str(user.user_id)})
-    
+    access_token = create_access_token(data={"sub": str(db_user.user_id)})
+    refresh_token = create_refresh_token(data={"sub": str(db_user.user_id)})
+
+    response.set_cookie(
+        key="access_token",
+        value=f"Bearer {access_token}",
+        httponly=True, 
+        max_age=config.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        samesite="lax",
+        secure=False  
+    )
+
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        max_age=config.REFRESH_TOKEN_EXPIRE_DAYS * 60,
+        path="/api/v1/auth/refresh",
+        samesite="lax",
+        secure=False
+    )
+
     return {
-        "access_token": token,
+        "access_token": access_token,
         "token_type": "bearer",
         "user": {
-            "user_id": user.user_id,
-            "email": user.email,
-            "role_name": user.roles.roles_name if user.roles else "User"
+            "user_id": db_user.user_id,
+            "email": db_user.email,
+            "role_name": db_user.roles.roles_name if db_user.roles else "User"
         }
     }

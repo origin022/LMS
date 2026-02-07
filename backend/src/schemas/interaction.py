@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 from typing import Optional
 
@@ -14,19 +14,41 @@ class CommentResponse(BaseModel):
     comment_id: int
     text: str
     submission_time: datetime 
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
+
+
+
+class Commentred(BaseModel):
+    comment_id: int
+    text: str
+    submission_time: datetime  
+    user: CommentUserDetail   
+    model_config = ConfigDict(from_attributes=True)
+
+     
+     
+    
+
+ 
+
+class CommentUpdate(BaseModel):
+    text: str
+
+class LikeToggle(BaseModel):
+    lecture_id: Optional[int] = None
+
+
+
+
+class CommentUserDetail(BaseModel):
+    name: str
+    profile_picture_url: Optional[str] = None
 
 class CommentRead(BaseModel):
     comment_id: int
     text: str
     submission_time: datetime  
-    user: CommentUserDetail    
-    
-    class Config:
-        from_attributes = True
-
-class LikeToggle(BaseModel):
-    lecture_id: Optional[int] = None
-    comment_id: Optional[int] = None
+    user: CommentUserDetail   
+     
+    model_config = ConfigDict(from_attributes=True)

@@ -1,12 +1,12 @@
 from sqlmodel import select, delete
+from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
-from src.services import user
-from src.models import Roles_Permission
+from src.models.Roles import Roles
+from src.models.Roles_Permission import Roles_Permission
 from src.models.User import User
-from src.models.Permission import Permission
 from src.models.User_Permission import User_Permission
-from src.schemas.manager import PermissionAction, UserStatusUpdate, LimitPermissionRequest
+from src.schemas.manager import PermissionAction, UpdateUserStatus, CreatLimitPermission
 from src.models.Comment import Comment
 
 class Manager:
@@ -33,7 +33,7 @@ class Manager:
     
 
     @staticmethod
-    async def update_user_status(db: AsyncSession, data: UserStatusUpdate):
+    async def update_user_status(db: AsyncSession, data: UpdateUserStatus):
         user = await Manager._get_target_user(db, data.user_id)
 
         status_map = {1: "نشط", 2: "معلق", 3: "محظور"}
@@ -48,7 +48,6 @@ class Manager:
 
         return {
             "message": f"تم تغيير حالة المستخدم إلى {status_map[data.target_state]}",
-            "user_id": user.user_id,
             "new_state": user.state_id
         }
 
@@ -65,7 +64,7 @@ class Manager:
 
    
     @staticmethod
-    async def toggle_user_permission(db: AsyncSession, data: LimitPermissionRequest):
+    async def toggle_user_permission(db: AsyncSession, data: CreatLimitPermission):
         await Manager._get_target_user(db, data.user_id)
 
         stmt = select(User_Permission).where(
@@ -74,7 +73,6 @@ class Manager:
         )
         existing = (await db.exec(stmt)).first()
 
-        # 3. معالجة الأكشن بناءً على الـ Enum
         if data.action == PermissionAction.block:
             if existing:
                 raise HTTPException(status_code=400, detail="المستخدم ممنوع مسبقاً")
@@ -91,51 +89,60 @@ class Manager:
             await db.delete(existing)
             await db.commit()
             return {"status": "success", "message": "تم إلغاء المنع بنجاح"}
-
     @staticmethod
     async def get_user_permissions(db: AsyncSession, user_id: int):
-        statement = select(User).where(User.user_id == user_id)
+        statement = (
+            select(User)
+            .where(User.user_id == user_id)
+            .options(
+                selectinload(User.roles)
+                    .selectinload(Roles.roles_permission)
+                    .selectinload(Roles_Permission.permission),
+                selectinload(User.custom_permissions)
+                    .selectinload(User_Permission.permission)
+        )
+    )
         result = await db.exec(statement)
         target_user = result.first()
 
         if not target_user:
             raise HTTPException(status_code=404, detail="المستخدم غير موجود")
-        if target_user.roles_id not in [3, 4]:
-            raise HTTPException(status_code=403, detail="لا يمكنك عرض تقرير صلاحيات لهذا المستوى")
 
-        role_perms_stmt = (
-            select(Permission)
-            .join(Roles_Permission)
-            .where(Roles_Permission.role_id == target_user.roles_id)
+        restricted_ids = {cp.permission_id for cp in target_user.custom_permissions}
+
+        final_permissions = []
+
+        for rp in target_user.roles.roles_permission:
+            p = rp.permission
+            if p.permission_id in restricted_ids:
+                status = "محظور"
+            else:
+                status = "مسموح للنوع"
+            
+            final_permissions.append({
+                "permission_id": p.permission_id,
+                "name": p.name,
+                "status": status
+        }   
         )
-        role_permissions = (await db.exec(role_perms_stmt)).all()
 
-        custom_perms_stmt = select(User_Permission).where(User_Permission.user_id == user_id)
-        custom_perms = (await db.exec(custom_perms_stmt)).all()
-    
+        role_perm_ids = {rp.permission_id for rp in target_user.roles.roles_permission}
+        for cp in target_user.custom_permissions:
+            if cp.permission_id not in role_perm_ids:
+                final_permissions.append({
+                    "permission_id": cp.permission.permission_id,
+                    "name": cp.permission.name,
+                    "status": "محظور (إضافي)"
+            }   
+            )
 
         return {
-            "user_info": {
-                "name": target_user.name, 
-                "role": "أستاذ" if target_user.roles_id == 3 else "طالب"
-            },
-            "all_type_permissions": [
-                {
-                    "permission_id": p.permission_id,
-                    "name": p.name,
-                    "default_status": "مسموح للنوع"
-                } for p in role_permissions
-            ],
-            "restrictions": [
-                {
-                    "permission_id": p.permission_id,
-                    "name": p.permission.name,
-                    "status": "محظور"
-                } for p in custom_perms
-        ]
+            "name": target_user.name,
+            "role_name": "أستاذ" if target_user.roles_id == 3 else "طالب",
+            "permissions": final_permissions
     }
-       
-    
+
+
     @staticmethod
     async def delete_comment(db: AsyncSession, comment_id: int):
         stmt = select(Comment).where(Comment.comment_id == comment_id)

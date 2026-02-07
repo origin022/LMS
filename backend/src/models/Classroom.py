@@ -12,5 +12,6 @@ class Classroom(SQLModel , table =True) :
 
     teacher_assignment :list["Teacher_Assignment"] = Relationship(back_populates="classroom")
     course : list["Course"] = Relationship(back_populates="classroom")
+    
 
     class_manager : list["Class_Manager"] = Relationship(back_populates="classroom")

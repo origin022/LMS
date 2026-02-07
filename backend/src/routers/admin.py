@@ -6,14 +6,15 @@ from src.core.dep import get_session
 from src.core.auth import PermissionChecker
 from src.schemas.admin import (
     ClassroomCreate, 
-    ClassroomRead, 
+    ClassroomRead,
+    GetUsersResponse, 
     InvitationCreate, 
     InvitationResponse,
     RoleCreateWithPermissions 
 )
 from src.services.admin import AdminService
 
-router = APIRouter(prefix="/admin")
+router = APIRouter(prefix="")
 
 check_add_class = PermissionChecker(["create classroom"])
 check_delete_class = PermissionChecker(["delete classroom"]) 
@@ -24,7 +25,7 @@ CHANGE_PERMISSION = PermissionChecker(["Change Permission"])
 DELETE_MANAGER = PermissionChecker(["Delete Manager"])
 
 
-@router.post("/classroom/create", response_model=ClassroomRead, status_code=status.HTTP_201_CREATED)
+@router.post("/admin/classrooms", response_model=ClassroomRead, status_code=status.HTTP_201_CREATED)
 async def create_new_classroom(
     data: ClassroomCreate,
     db: AsyncSession = Depends(get_session),
@@ -32,7 +33,7 @@ async def create_new_classroom(
 ):
     return await AdminService.create_classroom(db, data)
 
-@router.delete("/classroom/delete/{classroom_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/admin/classrooms/{classroom_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_classroom(
     classroom_id: int,
     db: AsyncSession = Depends(get_session),
@@ -43,7 +44,7 @@ async def delete_classroom(
 
 
 
-@router.post("/invite-manager", response_model=InvitationResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/admin/managers/invite", response_model=InvitationResponse, status_code=status.HTTP_201_CREATED)
 async def invite_new_manager(
     data: InvitationCreate,
     background_tasks: BackgroundTasks,
@@ -65,17 +66,17 @@ async def invite_new_manager(
     }
 
 
-@router.get("/users")
+@router.get("/admin/users" , response_model=list[GetUsersResponse])
 async def get_all_users(
-    role_id: Optional[int] = None,
+    roles_id: Optional[int] = None,
     state_id: Optional[int] = None,
     db: AsyncSession = Depends(get_session),
     current_user = Depends(VIEW_USERS)
 ):
-    return await AdminService.get_all_users(db, role_id, state_id)
+    return await AdminService.get_all_users(db, roles_id, state_id)
 
-@router.patch("/users/{user_id}/permissions")
-async def update_user_role(
+@router.patch("/admin/users/{user_id}/permissions")
+async def update_user_permissions(
     user_id: int,
     new_role_id: int,
     db: AsyncSession = Depends(get_session),
@@ -83,14 +84,14 @@ async def update_user_role(
 ):
     return await AdminService.update_user_permissions(db, user_id, new_role_id)
 
-@router.get("/permissions/available")
+@router.get("/admin/permissions")
 async def get_all_permissions(
     db: AsyncSession = Depends(get_session),
     current_user = Depends(CHANGE_PERMISSION)
 ):
     return await AdminService.get_all_available_permissions(db)
 
-@router.post("/roles/custom", status_code=status.HTTP_201_CREATED)
+@router.post("/admin/roles", status_code=status.HTTP_201_CREATED)
 async def create_custom_role(
     data: RoleCreateWithPermissions,
     db: AsyncSession = Depends(get_session),
@@ -98,7 +99,7 @@ async def create_custom_role(
 ):
     return await AdminService.create_custom_role(db, data)
 
-@router.patch("/managers/deactivate/{manager_id}")
+@router.patch("/admin/managers/{manager_id}/deactivate")
 async def deactivate_manager(
     manager_id: int,
     db: AsyncSession = Depends(get_session),

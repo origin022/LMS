@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from src.routers import profile as profile_router
 from src.routers import users as users_router 
 from src.routers import login as login_router
@@ -9,19 +10,29 @@ from src.routers import teacher as teacher_router
 from src.routers import interaction as interaction_router
 from src.routers import student as student_router
 
+
 app = FastAPI(
     title="LMS API",
     version="1.0.0",
     description="API for Learning Management System",
+
+
+
 )
+app.mount("/media", StaticFiles(directory="media"), name="media")
+
+
+
 app.include_router(
     admin_router.router,
+        prefix="/api/v1",
+
     tags=["Admin Dashboard"]
 )
 
 app.include_router(
     users_router.router,
-    prefix="/api/v1/users",
+    prefix="/api/v1",
     tags=["Public Users"]
 )
 app.include_router(
@@ -31,7 +42,7 @@ app.include_router(
 )
 app.include_router(
     user_router.router,
-    prefix="/api/v1/user",
+    prefix="/api/v1",
     tags=["user Management"]
 )
 
@@ -43,21 +54,21 @@ app.include_router(
 
 app.include_router(
     profile_router.router,
-    prefix="/api/v1/profile", 
+    prefix="/api/v1", 
     tags=["My Profile"]
 )
 app.include_router(
     manager_router.router,
-    prefix="/api/v1/manager", 
+    prefix="/api/v1", 
     tags=["Manager Operations"] 
 )
 
 app.include_router(
     teacher_router.router,
-    prefix="/api/v1/teacher", 
+    prefix="/api/v1", 
 )
 app.include_router(
     student_router.router,
-    prefix="/api/v1/student",
+    prefix="/api/v1",
 )
 

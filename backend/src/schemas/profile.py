@@ -1,14 +1,14 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 
-class ProfileUpdate(BaseModel):
+class UpdateProfile(BaseModel):
     bio: Optional[str] = None
     name: Optional[str] = None 
+    picture: Optional[bytes] = None
 
-class ProfileRead(BaseModel):
+class ReadProfile(BaseModel):
     name: str 
     bio: Optional[str] = None
-    has_picture: bool = False 
+    picture: bool = False 
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

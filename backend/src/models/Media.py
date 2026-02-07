@@ -10,10 +10,8 @@ class Media(SQLModel, table=True):
     media_id: Optional[int] = Field(default=None, primary_key=True)
     lecture_id: int = Field(foreign_key="lecture.lecture_id", index=True)
     
-    file_name: str = Field(nullable=False)  
-    file_data: bytes = Field(
-        sa_column=Column(LargeBinary, nullable=False)
-    ) 
+    file_path: str = Field(nullable=False)  
+    file_name: str = Field(nullable=False)
     mime_type: str = Field(nullable=False)  
     created_at: datetime = Field(
     sa_column=Column(

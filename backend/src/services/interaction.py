@@ -1,6 +1,9 @@
-from sqlmodel import select, and_ , desc
+from http.client import HTTPException
+from sqlmodel import select, and_ , desc 
+from fastapi import status
 from sqlmodel.ext.asyncio.session import AsyncSession
-from src.schemas.interaction import CommentCreate  
+from src.core.security import get_owned_obj
+from src.schemas.interaction import CommentCreate, CommentUpdate  
 from src.models.Comment import Comment
 from src.models.Like import Like
 from src.models.User import User
@@ -17,6 +20,10 @@ class InteractionS:
         db.add(new_comment)
         await db.commit()
         await db.refresh(new_comment)
+    
+   
+        new_comment.user = current_user 
+    
         return new_comment
 
     @staticmethod
@@ -50,3 +57,18 @@ class InteractionS:
         db.add(new_like)
         await db.commit()
         return {"action": "liked"}
+    
+
+
+    @staticmethod
+    async def update_comment(db: AsyncSession, comment_id: int, current_user: User, data: CommentUpdate):
+        db_comment = await get_owned_obj(db, Comment, comment_id, current_user)
+
+        update_data = data.model_dump(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_comment, key, value)
+
+        db.add(db_comment)
+        await db.commit()
+        await db.refresh(db_comment)
+        return db_comment

@@ -1,11 +1,12 @@
+from typing import Optional
 from sqlmodel import select
 from fastapi import HTTPException, status
 from sqlmodel.ext.asyncio.session import AsyncSession
+from src.models.State import State
 from src.models.Permission import Permission
 from src.models.Roles_Permission import Roles_Permission
-from src.routers import user
-from src.models import Roles
-from src.schemas.admin import ClassroomCreate, InvitationCreate, RoleCreateWithPermissions
+from src.models.Roles import Roles 
+from src.schemas.admin import ClassroomCreate, GetUsersResponse, InvitationCreate, RoleCreateWithPermissions 
 from src.models.Classroom import Classroom
 from src.models.Invitation import Invitation
 from datetime import datetime, timezone, timedelta
@@ -95,16 +96,33 @@ class AdminService:
         return new_invitation
     
     @staticmethod
-    async def get_all_users(db: AsyncSession, role_id: int = None, state_id: int = None):
-        statement = select(User).options(selectinload(User.roles))
+    async def get_all_users(db: AsyncSession, roles_id: int = None, state_id: int = None):
+
+        stmt = (
+        select(
+            User.name,
+            User.email,
+            User.phone,
+            Roles.roles_name,
+            State.name.label("state_name"),
+            User.created_at
+            )
+        .join(Roles, Roles.roles_id == User.roles_id)
+        .join(State, State.state_id == User.state_id)
+        )
     
-        if role_id:
-            statement = statement.where(User.roles_id == role_id)
-        if state_id:
-            statement = statement.where(User.state_id == state_id)
+        if roles_id is not None:
+            stmt = stmt.where(User.roles_id == roles_id)
+        if state_id is not None:
+            stmt = stmt.where(User.state_id == state_id)
         
-        result = await db.exec(statement)
-        return result.all()
+        result = await db.exec(stmt)   
+        rows = result.mappings().all()
+
+        return [
+            GetUsersResponse(**row) for row in rows
+ 
+        ]
     
     @staticmethod
     async def update_user_permissions(db: AsyncSession, target_user_id: int, new_role_id: int):
@@ -129,7 +147,7 @@ class AdminService:
         db.add(new_role)
         await db.flush()  
 
-        for perm_id in data.permission_ids:
+        for perm_id in data.permission_id:
             new_rel = Roles_Permission(
                 role_id=new_role.roles_id,
                 permission_id=perm_id
@@ -153,15 +171,26 @@ class AdminService:
         manager = result.first()
         if not manager:
             raise HTTPException(status_code=404, detail="المستخدم غير موجود")
-    
-        manager.state_id = 2
+        if manager.state_id==1 :
+            manager.state_id = 2
+            await db.commit()
+            return {"message": "تم تعطيل الحساب بنجاح بياناته وكلاساته لا تزال محفوظة."}
+        if manager.state_id==2 :
+            manager.state_id = 1
+            await db.commit()
+            return {"message": "تم تفعيل الحساب بنجاح بياناته وكلاساته لا تزال محفوظة."}
+        
+        else :
+              raise HTTPException(
+            status_code=400,
+            detail="حالة المستخدم غير معروفة"
+        )
 
-        await db.commit()
-        return {"message": "تم تعطيل الحساب بنجاح بياناته وكلاساته لا تزال محفوظة."}
 
+       
     @staticmethod
     async def get_all_classrooms(db: AsyncSession):
-        statement = select(Classroom)
+        statement = select(Classroom).options(selectinload(Classroom.course))
         result = await db.exec(statement)
         classrooms = result.all()
         return classrooms

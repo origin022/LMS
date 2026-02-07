@@ -1,11 +1,10 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 
-class UserPublic(BaseModel):
+class ReadeUserPublic(BaseModel):
     user_id: int
     name: str
     bio: Optional[str] = None
     profile_picture_url: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

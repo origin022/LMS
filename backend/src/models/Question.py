@@ -17,6 +17,9 @@ class Question(SQLModel , table = True):
 
     quiz : "Quiz" = Relationship(back_populates="question")
 
-    question_option :list["Question_Option"] = Relationship(back_populates="question")
+    question_option :list["Question_Option"] = Relationship(back_populates="question",
+            sa_relationship_kwargs={
+            "cascade": "all, delete-orphan",
+            "single_parent": True})
     quiz_attempt :list["Quiz_Attempt"] = Relationship(back_populates="question")
 

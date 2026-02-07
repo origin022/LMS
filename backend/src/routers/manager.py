@@ -5,7 +5,7 @@ from src.core.auth import PermissionChecker
 from src.core.dep import get_session
 
 from src.services.manager import Manager
-from src.schemas.manager import BasicManagerResponse, CustomPermissionResponse, ManagerActionResponse, PermissionsDashboardResponse, UserPermissionRead, UserStatusUpdate, LimitPermissionRequest
+from src.schemas.manager import BasicManagerResponse, CustomPermissionResponse, PermissionsDashboardResponse, ReadManagerAction, UpdateUserStatus, CreatLimitPermission
 
 router = APIRouter(
     prefix="",
@@ -14,9 +14,9 @@ router = APIRouter(
 
 
 
-@router.post("/update-status", response_model=ManagerActionResponse)
+@router.post("/update-status", response_model=ReadManagerAction)
 async def update_user_status(
-    data: UserStatusUpdate, 
+    data: UpdateUserStatus, 
     db: AsyncSession = Depends(get_session),
     current_user = Depends(PermissionChecker("Add Teacher"))
     ):
@@ -41,7 +41,7 @@ async def get_permissions_dashboard(
 
 @router.post("/toggle-permission", response_model=CustomPermissionResponse)
 async def toggle_permission(
-    data: LimitPermissionRequest, 
+    data: CreatLimitPermission, 
     db: AsyncSession = Depends(get_session),
     current_user = Depends(PermissionChecker(["Limiting permission"]))
 

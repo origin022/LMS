@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Respons
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.core.auth import PermissionChecker,get_current_user
 from src.core.dep import  get_session
-from src.schemas.profile import ProfileRead, ProfileUpdate
+from src.schemas.profile import ReadProfile, UpdateProfile
 from src.services.profile import ProfileService
 from src.models.User import User
 
@@ -13,8 +13,8 @@ router = APIRouter(
 
 
 @router.get(
-    "/me", 
-    response_model=ProfileRead,
+    "/profile", 
+    response_model=ReadProfile,
 )
 async def get_my_profile(
     db: AsyncSession = Depends(get_session),
@@ -42,15 +42,15 @@ async def get_my_profile(
         else:
             raise HTTPException(status_code=404, detail="الصفحة الشخصية غير موجودة")
 
-    return ProfileRead(
+    return ReadProfile(
         name=current_user.name,
         bio=profile.bio,
         has_picture=True if profile.profile_picture_data else False
     )
 
-@router.put("/update-profile", response_model=ProfileRead)
+@router.patch("/profile", status_code=200, response_model=UpdateProfile )
 async def update_profile(
-    data: ProfileUpdate,
+    data: UpdateProfile,
     db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
@@ -63,13 +63,13 @@ async def update_profile(
         current_user.name = data.name
 
     
-    return ProfileRead(
+    return UpdateProfile(
         name=current_user.name,
         bio=profile.bio,
         has_picture=True if profile.profile_picture_data else False
     )
 @router.post(
-    "/upload-picture",
+    "/profile/picture",
 )
 async def upload_picture(
     file: UploadFile = File(...),

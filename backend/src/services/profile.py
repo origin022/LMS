@@ -1,18 +1,19 @@
-from sqlmodel import select
+from sqlmodel import select 
+from sqlalchemy.orm import selectinload
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.models.Profile import Profile
 from src.models.User import User
-from src.schemas.profile import ProfileUpdate
+from src.schemas.profile import UpdateProfile
 
 class ProfileService:
     @staticmethod
-    async def get_profile(db: AsyncSession, user_id: int):
+    async def get_profile(db: AsyncSession, user_id: int ):
         statement = select(Profile).where(Profile.user_id == user_id)
         result = await db.exec(statement)
         return result.first()
 
     @staticmethod
-    async def update_profile_info(db: AsyncSession, user_id: int, data: ProfileUpdate):
+    async def update_profile_info(db: AsyncSession, user_id: int, data: UpdateProfile):
         if data.name:
             user_stmt = select(User).where(User.user_id == user_id)
             user_res = await db.exec(user_stmt)
@@ -29,8 +30,14 @@ class ProfileService:
                 db_profile.bio = data.bio
             
             await db.commit()
-            await db.refresh(db_profile)
-        return db_profile
+            final_stmt = (
+        select(Profile)
+        .where(Profile.user_id == user_id)
+        .options(selectinload(Profile.user))
+    )
+        final_res = await db.exec(final_stmt)
+        return final_res.first()
+        
 
     @staticmethod
     async def update_profile_picture(db: AsyncSession, user_id: int, image_bytes: bytes):

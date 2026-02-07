@@ -11,6 +11,7 @@ from src.models.State import State
 
 
 if TYPE_CHECKING:
+    from src.models.Course import Course
     from src.models.User_Permission import User_Permission
     from src.models.State import State
     from src.models.Roles import Roles
@@ -43,15 +44,31 @@ class User(SQLModel ,table = True) :
 
   roles : "Roles"  = Relationship(back_populates="user")
   state : "State"  = Relationship(back_populates="user")
-  teacher_assignment : list["Teacher_Assignment"] = Relationship(back_populates="user")
-  quiz :list["Quiz"] = Relationship(back_populates="user")
-  quiz_attempt :list["Quiz_Attempt"] = Relationship(back_populates="student")
-  like : list["Like"] = Relationship(back_populates="user")
-  lecture :list["Lecture"] =Relationship(back_populates="user")
-  enrollment: list["Enrollment"] = Relationship(back_populates="student")
-  comment : list["Comment"] = Relationship(back_populates="user")
+  teacher_assignment : list["Teacher_Assignment"] = Relationship(back_populates="user",
+                                    sa_relationship_kwargs={"single_parent": True, "cascade": "all, delete-orphan"})
+  quiz :list["Quiz"] = Relationship(back_populates="user" , 
+                                    sa_relationship_kwargs={"single_parent": True, "cascade": "all, delete-orphan"})
+  quiz_attempt :list["Quiz_Attempt"] = Relationship(back_populates="student",
+                                    sa_relationship_kwargs={"single_parent": True, "cascade": "all, delete-orphan"})
+  like : list["Like"] = Relationship(back_populates="user",
+                                     sa_relationship_kwargs={"single_parent": True, "cascade": "all, delete-orphan"})
+  lecture :list["Lecture"] =Relationship(back_populates="user" , 
+                                    sa_relationship_kwargs={"single_parent": True, "cascade": "all, delete-orphan"})
+  enrollment: list["Enrollment"] = Relationship(back_populates="student",
+                                    sa_relationship_kwargs={"single_parent": True, "cascade": "all, delete-orphan"})
+  comment : list["Comment"] = Relationship(back_populates="user",
+                                    sa_relationship_kwargs={"single_parent": True, "cascade": "all, delete-orphan"})
   class_manager:list["Class_Manager"] = Relationship(back_populates="manager")
-  profile: Optional["Profile"] = Relationship(back_populates="user")
+  profile: Optional["Profile"] = Relationship(back_populates="user",
+                                    sa_relationship_kwargs={"single_parent": True, "cascade": "all, delete-orphan"})
+  
+  courses: list["Course"] = Relationship(back_populates="user",
+    sa_relationship_kwargs={
+        "cascade": "all, delete-orphan",
+        "single_parent": True
+    }
+)
+
   custom_permissions: List["User_Permission"] = Relationship(back_populates="user")
 
   __table_args__ = (

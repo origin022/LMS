@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from sqlmodel import Column, DateTime, Index, SQLModel , Field, Relationship
-from typing import TYPE_CHECKING  ,List
+from typing import TYPE_CHECKING  ,List, Optional
 
 if TYPE_CHECKING:
 
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 class Lecture(SQLModel , table = True) :
     lecture_id :int |None = Field(default=None , primary_key= True)
-    title :str = Field(max_length=30 , nullable=False)
+    title :str = Field(max_length=100 , nullable=False)
     description :str = Field(nullable=True)
     course_id : int  = Field(foreign_key='course.course_id', index=True , nullable=False)
     user_id : int = Field(foreign_key='user.user_id', index=True , nullable=False)
@@ -26,6 +26,7 @@ class Lecture(SQLModel , table = True) :
     ),
     default_factory=lambda: datetime.now(timezone.utc)
 )
+    text : Optional[str] = Field(default=None, nullable=True)
 
     media : list["Media"]=Relationship(back_populates="lecture",cascade_delete=True)
     like : list["Like"] = Relationship(back_populates="lecture",cascade_delete=True)
@@ -33,7 +34,7 @@ class Lecture(SQLModel , table = True) :
 
 
     course : "Course" = Relationship(back_populates="lecture")
-    user : "User" = Relationship(back_populates="lecture")
+    user : "User" = Relationship(back_populates="lecture" )
     quiz : list["Quiz"] = Relationship(back_populates="lecture")
 
     

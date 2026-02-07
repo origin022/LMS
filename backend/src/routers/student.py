@@ -3,14 +3,14 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from fastapi import APIRouter, Depends, HTTPException,  status  
 from src.core.auth import PermissionChecker
 from src.services.student import StudentService
-from src.schemas.student import  QuizReviewResponse, QuizSubmission, ViewEnrollments
+from src.schemas.student import  QuizReviewResponse, CreateQuizSubmission, ReadEnrollments
 
 router = APIRouter(
     prefix="",
     tags=["Student"]
 )
 
-@router.get("/enrollments", status_code=status.HTTP_200_OK , response_model=list[ViewEnrollments])
+@router.get("/enrollments", status_code=status.HTTP_200_OK , response_model=list[ReadEnrollments])
 async def get_enrollments(
     db: AsyncSession = Depends(get_session),
     current_user = Depends(PermissionChecker(["view enrollments"])),
@@ -64,7 +64,7 @@ async def unenroll_from_course(
     response_model=QuizReviewResponse
 )
 async def submit_quiz_answers(
-    submission: QuizSubmission,
+    submission: CreateQuizSubmission,
     db: AsyncSession = Depends(get_session),
     current_user = Depends(PermissionChecker(["Quiz attempt"])) 
 ):

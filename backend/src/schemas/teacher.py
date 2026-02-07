@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, ConfigDict, model_validator
 
 
 class CourseCreate(BaseModel):
@@ -15,28 +15,30 @@ class LectureCreate(BaseModel):
     description: Optional[str] = None
     course_id: int
 
+class MediaRead(BaseModel):
+    media_id: int
+    file_path: str
+    file_name: str
+    mime_type: str
+    created_at: datetime
+
 
 class LectureRead(BaseModel):
+    lecture_id: int
     title: str
     description: Optional[str]
     course_id: int
     created_at: datetime
-    media: List["MediaRead"] = []
+    text: Optional[str] = None
+    media: list[MediaRead] = []
 
 
 class QuizCreate(BaseModel):
     title: str
     description: Optional[str] = None
-    duration_minute: int
-    course_id: Optional[int] = None
-    lecture_id: Optional[int] = None
-    @model_validator(mode="after")
-    def check_relation(self):
-        if not self.course_id and not self.lecture_id:
-            raise ValueError("Quiz must belong to a course or a lecture")
-        if self.course_id and self.lecture_id:
-            raise ValueError("Quiz cannot belong to both course and lecture")
-        return self
+    lecture_id: int
+ 
+
 
 
 
@@ -44,37 +46,43 @@ class QuizRead(BaseModel):
     quiz_id: int
     title: str
     description: Optional[str]
-    duration_minute: int
-    course_id: Optional[int] = None
-    lecture_id: Optional[int] = None
-    questions: List["QuestionRead"] = []
+    lecture_id: int
+    question: List["QuestionRead"] = []
+    model_config = ConfigDict(from_attributes=True)
 
 
-class LeactureBasic (BaseModel):
+
+
+class LectureBasic (BaseModel):
     lecture_id: int
     title: str
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
-class CourseRead(BaseModel):
+class CourseWithLectures(BaseModel):
     course_id: int
-    name: str
-    class_id: int
-    teacher_id: int
-    lecture: List[LeactureBasic] = []
-    quiz: List[QuizRead] = []
+    lecture: List[LectureBasic]  
+    model_config = ConfigDict(from_attributes=True)
 
 class CourseBasic (BaseModel):
     course_id: int
     name: str
-    class Config:
-        from_attributes = True
-class classread(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+class CourseRead(BaseModel):
+    class_id: int
+    course: List[CourseBasic] 
+    model_config = ConfigDict(from_attributes=True)
+
+
+
+
+class ClassroomRead(BaseModel):
     class_id: int
     class_name: str
     course :list[CourseBasic]
-    class Config:
-        from_attributes = True
+    
+    model_config = ConfigDict(from_attributes=True)
+
    
 
 class QuestionCreate(BaseModel):
@@ -88,8 +96,8 @@ class QuestionRead(BaseModel):
     question_text: str
     quiz_id: int
     question_option: List["OptionRead"] = []
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 
 class OptionCreate(BaseModel):
@@ -102,19 +110,36 @@ class OptionRead(BaseModel):
     option_id: int
     option_test: str
     question_id: int
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 
-class MediaCreate(BaseModel):
-    lecture_id: int
 
 
-class MediaRead(BaseModel):
-    media_id: int
-    lecture_id: int
-    file_name: str
-    mime_type: str
-    created_at: datetime
 
+
+
+class CourseUpdate(BaseModel):
+    name: Optional[str] = None
+    class_id: Optional[int] = None
+
+class LectureUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    course_id: Optional[int] = None
+
+class QuizUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+
+class QuestionUpdate(BaseModel):
+    question_text: Optional[str] = None
+
+class OptionUpdate(BaseModel):
+    option_test: Optional[str] = None
+    is_correct: Optional[bool] = None
+
+
+class AssignClassSchema(BaseModel):
+    class_id: int
+    user_id: int

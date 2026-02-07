@@ -2,14 +2,14 @@
 from fastapi import APIRouter, BackgroundTasks, Depends
 from src.services.EmailSe import EmailService
 from src.core.dep import get_session 
-from src.schemas.user import UserCreate, UserRegister, UserResponse
-from src.services.user import Manager, create_new_user 
+from src.schemas.user import UserCreate, UserInvitationRegister, UserRead
+from src.services.user import  create_new_user, register_invited_user 
 from sqlmodel.ext.asyncio.session import AsyncSession
 from fastapi import APIRouter, Depends
 
 
 router = APIRouter( ) 
-@router.post("/register", response_model=UserResponse)
+@router.post("/register", response_model=UserRead)
 async def register_user(
     user_data: UserCreate,
     background_tasks: BackgroundTasks, 
@@ -34,12 +34,12 @@ async def register_user(
 
 
 
-@router.post("/register-by-token", response_model=UserResponse)
+@router.post("/register-by-token", response_model=UserRead)
 async def register_by_token(
-    user_data: UserRegister, 
+    user_data: UserInvitationRegister, 
     db: AsyncSession = Depends(get_session)
 ):
-    return await Manager.register_invited_user(db, user_data)
+    return await register_invited_user(db, user_data)
 
 
 
