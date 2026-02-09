@@ -5,15 +5,15 @@ from typing import TYPE_CHECKING  ,List
 if TYPE_CHECKING:
 
     from src.models.Quiz import Quiz
-    from src.models.Course import Course
     from src.models.Quiz_Attempt import Quiz_Attempt
-    from src.models.Lecture import Lecture
     from src.models.Question_Option import Question_Option
 
 class Question(SQLModel , table = True):
     question_id :int|None = Field(default=None , primary_key=True)
     question_text :str =Field(nullable=False)
     quiz_id : int =Field(foreign_key='quiz.quiz_id', index=True , nullable=False)
+    difficulty_level: int = Field(ge=1, le=3)
+    concept_tags: str
 
     quiz : "Quiz" = Relationship(back_populates="question")
 

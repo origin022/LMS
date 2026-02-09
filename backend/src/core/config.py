@@ -23,6 +23,7 @@ class Config(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int 
     REFRESH_TOKEN_EXPIRE_DAYS: int
+    GROQ_API_KEY: str
  
  
     POSTGRES_USER: str = "postgres"

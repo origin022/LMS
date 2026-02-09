@@ -23,7 +23,9 @@ from src.models.Enrollment import Enrollment
 from src.models.User_Permission import User_Permission
 from src.models.Invitation import Invitation
 from src.models.VerificationTok  import VerificationToken
+from src.models.Student_Mastery import Student_Mastery
 from src.core.dep import engine
+Quiz_Attempt.model_rebuild()
 
 from src.seed import initial_setup 
 

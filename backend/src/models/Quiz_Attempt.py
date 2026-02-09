@@ -1,6 +1,6 @@
-from datetime import datetime, timezone
 from sqlmodel import SQLModel , Field , Relationship
-from typing import TYPE_CHECKING  ,List
+from typing import TYPE_CHECKING, Optional  
+
 
 
 if TYPE_CHECKING:
@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from src.models.User import User
     from src.models.Question_Option import Question_Option
     from src.models.Quiz import Quiz
+
 
 
 class Quiz_Attempt (SQLModel , table = True):
@@ -21,5 +22,4 @@ class Quiz_Attempt (SQLModel , table = True):
     question : "Question" = Relationship(back_populates="quiz_attempt")
     answer : "Question_Option" = Relationship(back_populates="quiz_attempt")
     quiz : "Quiz" = Relationship(back_populates="quiz_attempt")
-
-    
+      

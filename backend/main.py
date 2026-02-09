@@ -9,6 +9,9 @@ from src.routers import manager as manager_router
 from src.routers import teacher as teacher_router
 from src.routers import interaction as interaction_router
 from src.routers import student as student_router
+from src.models.Quiz_Attempt import Quiz_Attempt
+
+Quiz_Attempt.model_rebuild()
 
 
 app = FastAPI(

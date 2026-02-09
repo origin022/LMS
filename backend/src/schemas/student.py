@@ -1,3 +1,4 @@
+from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
 from src.schemas.teacher import CourseBasic
 
@@ -16,18 +17,42 @@ class CreateQuestionAnswer(BaseModel):
     question_id: int
     answer_id: int  
 
-    
-class CreateQuizSubmission(BaseModel):
-    quiz_id: int
-    answers: list[CreateQuestionAnswer]
 
-class AnswerReview(BaseModel):
-    question_id: int
-    student_answer_id: int
-    correct_answer_id: int
-    is_correct: bool = False
 
-class QuizReviewResponse(BaseModel):
-    status: str
+
+class RankResponse(BaseModel):
+    student_score: int
+    rank: int
+    total_students: int
     message: str
-    results: list[AnswerReview]
+
+
+
+class QuestionSubmission(BaseModel):
+    quiz_id: int
+    question_id: int
+    answer_id: int
+
+
+
+class QuestionOptionRead(BaseModel):
+    option_id: int
+    option_text: str
+
+class AnswerResponse(BaseModel):
+    is_correct: bool
+    correct_answer_id: int
+    points_earned: int
+    current_streak: int
+    next_difficulty: int
+    message: str
+
+
+class NextQuestionRequest(BaseModel):
+    status: str
+    quiz_id: Optional[int] = None      
+    question_id: Optional[int] = None
+    question_text: Optional[str] = None
+    difficulty: Optional[int] = None
+    options: Optional[List[QuestionOptionRead]] = None
+    message: Optional[str] = None

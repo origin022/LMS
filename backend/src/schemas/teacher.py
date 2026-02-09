@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict
 
 
 class CourseCreate(BaseModel):
@@ -33,11 +33,6 @@ class LectureRead(BaseModel):
     media: list[MediaRead] = []
 
 
-class QuizCreate(BaseModel):
-    title: str
-    description: Optional[str] = None
-    lecture_id: int
- 
 
 
 
@@ -85,9 +80,7 @@ class ClassroomRead(BaseModel):
 
    
 
-class QuestionCreate(BaseModel):
-    question_text: str
-    quiz_id: int
+
 
 
 
@@ -100,10 +93,6 @@ class QuestionRead(BaseModel):
 
 
 
-class OptionCreate(BaseModel):
-    option_test: str
-    is_correct: bool
-    question_id: int
 
 
 class OptionRead(BaseModel):
@@ -143,3 +132,25 @@ class OptionUpdate(BaseModel):
 class AssignClassSchema(BaseModel):
     class_id: int
     user_id: int
+
+
+
+
+# سكيما مخصصة فقط لعملية التوليد لضمان استلام البيانات بالشكل الصحيح
+class GeneratedOption(BaseModel):
+    option_test: str
+    is_correct: bool
+
+class GeneratedQuestion(BaseModel):
+    question_text: str
+    difficulty: int
+    tag: str
+    options: List[GeneratedOption]
+
+class GeneratedQuizResponse(BaseModel):
+    questions: List[GeneratedQuestion]
+
+class QuizGenerateRequest(BaseModel):
+    lecture_id: int  
+    quiz_id: int
+    num_questions: int = 5

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, UploadFile,  status ,File
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile,  status ,File
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.core.auth import PermissionChecker
 from src.core.dep import get_session
@@ -8,10 +8,7 @@ from src.schemas.teacher import (
     CourseCreate,
     LectureCreate,
     LectureRead,
-    QuestionRead,
-    QuizCreate,
-    QuestionCreate,
-    OptionCreate,
+    QuizGenerateRequest,
     QuizRead,
     CourseUpdate,      
     LectureUpdate,     
@@ -91,31 +88,11 @@ async def delete_lecture(
 
 
 
-@router.post("/teacher/lectures/{lecture_id}/quizzes", status_code=status.HTTP_201_CREATED)
-async def create_quiz(
-    data: QuizCreate,
-    db: AsyncSession = Depends(get_session),
-    current_user = Depends(PermissionChecker(["Assign Quiz"]))
-):
-    return await TeacherService.create_quiz(
-        db=db,
-        data=data,
-        current_user=current_user
-    )
 
 
 
 
 
-@router.post("/questions", status_code=status.HTTP_201_CREATED)
-async def create_question(
-    data: QuestionCreate,
-    db: AsyncSession = Depends(get_session),
-    current_user = Depends(PermissionChecker(["Assign Quiz"]))
-):
-    return await TeacherService.create_question(
-        db=db, 
-        data=data)
 
 
 @router.get("/quizzes/{quiz_id}/questions",response_model=QuizRead)
@@ -127,16 +104,6 @@ async def get_quiz_questions(
     quiz = await TeacherService.get_quiz_questions(db, quiz_id)
     return quiz
 
-@router.post("/options", status_code=status.HTTP_201_CREATED)
-async def create_option(
-    data: OptionCreate,
-    db: AsyncSession = Depends(get_session),
-    current_user = Depends(PermissionChecker(["Assign Quiz"]))
-):
-    return await TeacherService.create_option(
-        db=db,
-        data=data
-    )
 
 
 @router.patch("/courses/{course_id}", response_model=CourseBasic)
@@ -247,3 +214,22 @@ async def upload_lecture_video(
     )
 
     return {"message": "الفديو تم رفعه بنجاح."}
+
+
+@router.post("/generate-ai", status_code=status.HTTP_201_CREATED)
+async def generate_quiz_by_ai(
+    data: QuizGenerateRequest,
+    session: AsyncSession = Depends(get_session)
+):
+  
+    try:
+        result = await TeacherService.generate_and_save_quiz(session, data)
+        return result
+    
+    except HTTPException as http_ex:
+        raise http_ex
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"حدث خطأ أثناء توليد الكويز: {str(e)}"
+        )

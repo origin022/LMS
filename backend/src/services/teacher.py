@@ -1,5 +1,7 @@
+import json
 import os
 import torch
+from groq import Groq
 import whisper
 import shutil
 from src.core.dep import engine
@@ -9,14 +11,17 @@ from fastapi import HTTPException, UploadFile
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.models.Media import Media
 from src.core.security import get_owned_obj
-from src.models import User
-from src.core.security import get_owned_obj
+from src.models.User import User
 from src.models import Teacher_Assignment
-from src.models import Lecture,  Question, Question_Option, Quiz
+from src.models.Lecture import Lecture
+from src.models.Quiz import Quiz
+from src.models.Question import Question
+from src.models.Question_Option import Question_Option
 from src.models.Course import Course
 from sqlalchemy.orm import selectinload
-from src.schemas.teacher import CourseCreate, CourseUpdate, LectureCreate, LectureUpdate, OptionCreate, OptionUpdate, QuestionCreate, QuestionUpdate, QuizCreate, QuizRead, QuizUpdate
-
+from src.schemas.teacher import CourseCreate, CourseUpdate, LectureCreate, LectureUpdate, OptionUpdate, QuestionUpdate, QuizGenerateRequest, QuizUpdate
+from src.core.config import config
+groq_client = Groq(api_key=config.GROQ_API_KEY)
 class TeacherService:
    
     @staticmethod
@@ -90,42 +95,6 @@ class TeacherService:
 
 
 
-
-
-
-    @staticmethod
-    async def create_quiz(db: AsyncSession, data: QuizCreate, current_user: User):
-        lecture = await get_owned_obj(db, Lecture, data.lecture_id, current_user)
-        quiz = Quiz(
-            title=data.title,
-            description=data.description,
-            lecture_id=data.lecture_id,
-            user_id=current_user.user_id
-            
-        )
-        db.add(quiz)
-        await db.commit()
-        await db.refresh(quiz)
-        return quiz
-
-
-
-
-
-
-
-
-    @staticmethod
-    async def create_question(db: AsyncSession, data: QuestionCreate):
-        question = Question(
-            question_text=data.question_text,
-            quiz_id=data.quiz_id,
-        )
-        db.add(question)
-        await db.commit()
-        await db.refresh(question)
-        return question
-
     @staticmethod
     async def get_quiz_questions(db: AsyncSession, quiz_id: int):
         stmt = (
@@ -143,21 +112,6 @@ class TeacherService:
         if not quiz:
             raise HTTPException(status_code=404, detail="Quiz not found")
         return quiz
-
-
-    @staticmethod
-    async def create_option(db: AsyncSession, data: OptionCreate):
-        option = Question_Option(
-            option_test=data.option_test,
-            is_correct=data.is_correct,
-            question_id=data.question_id
-        )
-        db.add(option)
-        await db.commit()
-        await db.refresh(option)
-        return option
-
-
 
 
 
@@ -378,3 +332,79 @@ class TeacherService:
         await db.refresh(new_media)
         
         return new_media
+    
+
+
+
+    @staticmethod
+    async def generate_and_save_quiz(session: AsyncSession, data: QuizGenerateRequest):
+        # 1. جلب المحاضرة
+        statement = select(Lecture).where(Lecture.lecture_id == data.lecture_id)
+        result = await session.exec(statement)
+        lecture = result.first()
+
+        if not lecture or not lecture.text:
+            raise HTTPException(status_code=404, detail="المحاضرة غير موجودة")
+
+        try:
+            # 2. طلب التوليد من Groq
+            completion = groq_client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are an expert educator. Generate exactly 15 MCQ questions from the text provided. "
+                            "Distribution: 5 Easy (Level 1), 5 Medium (Level 2), 5 Hard (Level 3). "
+                            "Each question must have exactly 4 options. "
+                            "Return ONLY a JSON object with this exact structure: "
+                            "{\"questions\": [{\"question_text\": \"string\", \"difficulty\": 1, \"tag\": \"string\", "
+                            "\"options\": [{\"option_text\": \"string\", \"is_correct\": bool}]}]}"
+                        )
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Text: {lecture.text}"
+                    }
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.8
+            )
+
+            raw_data = json.loads(completion.choices[0].message.content)
+
+            for q_item in raw_data.get('questions', []):
+                q_text = q_item.get('question_text') or q_item.get('text')
+                
+                if not q_text:
+                    continue
+
+                new_q = Question(
+                    question_text=q_text,
+                    quiz_id=data.quiz_id,
+                    difficulty_level=int(q_item.get('difficulty', 1)),
+                    concept_tags=q_item.get('tag', 'General')
+                )
+                session.add(new_q)
+                await session.flush() 
+
+                for opt in q_item.get('options', []):
+                    o_text = opt.get('option_text')
+                    
+                    if not o_text:
+                        continue 
+                    
+                    new_opt = Question_Option(
+                        question_id=new_q.question_id,
+                        option_text=o_text, 
+                        is_correct=opt.get('is_correct', False)
+                    )
+                    session.add(new_opt)
+
+            await session.commit()
+            return {"status": "success", "message": "تم توليد 15 سؤالاً وحفظ الخيارات بنجاح"}
+
+        except Exception as e:
+            await session.rollback()
+            print(f"GROQ ERROR: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"فشل التوليد: {str(e)}")
