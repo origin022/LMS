@@ -17,7 +17,7 @@ async def register_user(
 ):
     user, raw_token = await create_new_user(user_data=user_data, db=db)
 
-    background_tasks.add_task(
+    background_tasks.add_task( 
         EmailService.send_universal_mail,
         to_email=user.email,
         token=raw_token,

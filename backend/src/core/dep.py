@@ -1,5 +1,5 @@
-from typing import AsyncGenerator, List 
-from fastapi import Depends, HTTPException, status
+from typing import AsyncGenerator
+from fastapi import  HTTPException, status
 from sqlmodel.ext.asyncio.session import AsyncSession    
 from sqlalchemy.ext.asyncio import create_async_engine
 

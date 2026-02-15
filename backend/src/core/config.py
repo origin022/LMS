@@ -1,8 +1,7 @@
 import os
-import secrets
 from typing import List, Literal
 from pathlib import Path
-from pydantic import AnyUrl, PostgresDsn, Field
+from pydantic import AnyUrl, PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 

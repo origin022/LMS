@@ -1,4 +1,3 @@
-from typing import Optional
 from sqlmodel import select
 from fastapi import HTTPException, status
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -24,6 +23,8 @@ class AdminService:
         await db.commit()
         await db.refresh(new_class)
         return new_class
+    
+    
 
     @staticmethod
     async def delete_classroom(db: AsyncSession, classroom_id: int):

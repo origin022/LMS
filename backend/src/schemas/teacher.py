@@ -88,6 +88,7 @@ class QuestionRead(BaseModel):
     question_id: int
     question_text: str
     quiz_id: int
+    difficulty_level: int
     question_option: List["OptionRead"] = []
     model_config = ConfigDict(from_attributes=True)
 
@@ -97,7 +98,7 @@ class QuestionRead(BaseModel):
 
 class OptionRead(BaseModel):
     option_id: int
-    option_test: str
+    option_text: str
     question_id: int
     model_config = ConfigDict(from_attributes=True)
 
@@ -136,7 +137,6 @@ class AssignClassSchema(BaseModel):
 
 
 
-# سكيما مخصصة فقط لعملية التوليد لضمان استلام البيانات بالشكل الصحيح
 class GeneratedOption(BaseModel):
     option_test: str
     is_correct: bool

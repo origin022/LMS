@@ -46,7 +46,7 @@ async def login_user(email: str, password: str, db: AsyncSession, response: Resp
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        max_age=config.REFRESH_TOKEN_EXPIRE_DAYS * 60,
+        max_age=config.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         path="/api/v1/auth/refresh",
         samesite="lax",
         secure=False

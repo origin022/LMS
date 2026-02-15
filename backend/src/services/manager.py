@@ -1,4 +1,4 @@
-from sqlmodel import select, delete
+from sqlmodel import select
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -10,8 +10,6 @@ from src.schemas.manager import PermissionAction, UpdateUserStatus, CreatLimitPe
 from src.models.Comment import Comment
 
 class Manager:
-
-
 
 
     @staticmethod

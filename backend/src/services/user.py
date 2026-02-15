@@ -44,7 +44,7 @@ async def create_new_user(
         token=raw_token,
         email=new_user.email,
         expires_at=expires, 
-        type="magic_link"
+        type="verification_entry"
     )
     db.add(verification_entry)
 

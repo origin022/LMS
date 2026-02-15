@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from passlib.context import CryptContext
 from jose import JWTError, jwt
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 from sqlmodel import select
 
 from .config import config  
@@ -44,7 +44,6 @@ def create_refresh_token(data: dict):
     expire = datetime.now(timezone.utc) + timedelta(days=config.REFRESH_TOKEN_EXPIRE_DAYS)
     to_encode.update({"exp": expire, "type": "refresh"}) 
     return jwt.encode(to_encode, config.SECRET_KEY, algorithm=config.ALGORITHM)
-
 
 
 

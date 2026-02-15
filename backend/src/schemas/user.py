@@ -31,3 +31,5 @@ class UserInvitationRegister(BaseModel):
     password: str
     token: str  
     phone:str
+
+

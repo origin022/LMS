@@ -21,7 +21,9 @@ from src.models.Course import Course
 from sqlalchemy.orm import selectinload
 from src.schemas.teacher import CourseCreate, CourseUpdate, LectureCreate, LectureUpdate, OptionUpdate, QuestionUpdate, QuizGenerateRequest, QuizUpdate
 from src.core.config import config
+
 groq_client = Groq(api_key=config.GROQ_API_KEY)
+
 class TeacherService:
    
     @staticmethod
@@ -288,7 +290,7 @@ class TeacherService:
                     print(f"✅ تم تحديث النص للمحاضرة {lecture_id} بنجاح")
 
         except Exception as e:
-            print(f"❌ خطأ في عملية التحويل: {str(e)}")
+            print(f" خطأ في عملية التحويل: {str(e)}")
 
     
     @staticmethod
@@ -338,7 +340,6 @@ class TeacherService:
 
     @staticmethod
     async def generate_and_save_quiz(session: AsyncSession, data: QuizGenerateRequest):
-        # 1. جلب المحاضرة
         statement = select(Lecture).where(Lecture.lecture_id == data.lecture_id)
         result = await session.exec(statement)
         lecture = result.first()
@@ -347,7 +348,6 @@ class TeacherService:
             raise HTTPException(status_code=404, detail="المحاضرة غير موجودة")
 
         try:
-            # 2. طلب التوليد من Groq
             completion = groq_client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[

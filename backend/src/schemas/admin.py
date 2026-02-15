@@ -39,11 +39,7 @@ class RoleCreateWithPermissions(BaseModel):
     roles_name: str
     permission_id: List[int] = Field(default_factory=list)
 
-class ClassroomRead(BaseModel):
-    class_id: int
-    class_name: str
 
-    model_config = ConfigDict(from_attributes=True)
 
 
 
