@@ -3,7 +3,7 @@ from typing import Optional
 from sqlmodel import Column, DateTime, SQLModel , Field, UniqueConstraint 
 
 class Student_Mastery(SQLModel, table=True):
-    mastery_id: Optional[int] = Field(default=None, primary_key=True)
+    mastery_id: Optional[int] = Field(default=None , primary_key=True)
     user_id: int = Field(foreign_key="user.user_id", index=True)
     course_id: int = Field(foreign_key="course.course_id", index=True) 
     mastery_score: float = Field(default=0.0) 

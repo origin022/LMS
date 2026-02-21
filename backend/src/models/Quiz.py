@@ -13,7 +13,7 @@ class Quiz(SQLModel, table = True):
     quiz_id : int |None = Field(default=None , primary_key= True)
     title :str =Field(nullable=False)
     description :str = Field(nullable=True)
-    lecture_id : int = Field(foreign_key='lecture.lecture_id', index=True , nullable=true) 
+    lecture_id : int = Field(foreign_key='lecture.lecture_id', index=True , nullable=True) 
     user_id : int = Field(foreign_key='user.user_id', index=True , nullable=False)
 
     user  :"User" = Relationship(back_populates="quiz")

@@ -13,12 +13,9 @@ class Media(SQLModel, table=True):
     file_path: str = Field(nullable=False)  
     file_name: str = Field(nullable=False)
     mime_type: str = Field(nullable=False)  
-    created_at: datetime = Field(
-    sa_column=Column(
-    DateTime(timezone=True),
-    nullable=False
-    ),
-    default_factory=lambda: datetime.now(timezone.utc)
+    created_at:  datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_type=DateTime(timezone=True), 
 )
     
 

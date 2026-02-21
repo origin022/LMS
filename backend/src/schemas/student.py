@@ -56,3 +56,5 @@ class NextQuestionRequest(BaseModel):
     difficulty: Optional[int] = None
     options: Optional[List[QuestionOptionRead]] = None
     message: Optional[str] = None
+
+

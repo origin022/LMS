@@ -10,6 +10,7 @@ from src.routers import teacher as teacher_router
 from src.routers import interaction as interaction_router
 from src.routers import student as student_router
 from src.models.Quiz_Attempt import Quiz_Attempt
+from fastapi.middleware.cors import CORSMiddleware
 
 Quiz_Attempt.model_rebuild()
 
@@ -21,6 +22,15 @@ app = FastAPI(
 
 
 
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 app.mount("/media", StaticFiles(directory="media"), name="media")
 

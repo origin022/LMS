@@ -9,17 +9,17 @@ from src.services.login import login_user
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-@router.post("/login", response_model=Token)
+@router.post("/login")
 async def login(
     response: Response,
-    login_data: OAuth2PasswordRequestForm = Depends(), 
+    form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_session)
 ):
     return await login_user(
-        email=login_data.username, 
-        password=login_data.password, 
-        db=db, 
-        response=response 
+        email=form_data.username,
+        password=form_data.password,
+        db=db,
+        response=response
     )
 
 @router.post("/logout")
@@ -49,7 +49,12 @@ async def refresh_access_token(request: Request, response: Response):
             raise HTTPException(status_code=401, detail="توكن غير صالح")
         
         user_id = payload.get("sub")
-        new_access = create_access_token(data={"sub": user_id})
+        new_access = create_access_token(
+        data={
+            "sub": user_id,
+            "type": "access"
+        }
+)
 
         response.set_cookie(
             key="access_token",

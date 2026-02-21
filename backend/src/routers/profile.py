@@ -14,7 +14,6 @@ router = APIRouter(
 
 @router.get(
     "/profile", 
-    response_model=ReadProfile,
 )
 async def get_my_profile(
     db: AsyncSession = Depends(get_session),
@@ -93,8 +92,7 @@ async def upload_picture(
 
 
 @router.get(
-    "/picture/me",
-)
+    "/picture/me")
 async def get_my_profile_picture(
     db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user)

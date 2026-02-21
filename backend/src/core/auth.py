@@ -12,72 +12,55 @@ from src.core.security import decode_access_token
 from src.core.dep import get_session
 from src.models.User import User
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login", auto_error=False)
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="api/v1/auth/login",
+    auto_error=False
+)
+
 async def get_current_user(
     request: Request,
     db: AsyncSession = Depends(get_session),
-    token_with_bearer: str = Depends(oauth2_scheme)
+    token_from_header: str | None = Depends(oauth2_scheme)
 ) -> User:
-    token_with_bearer = request.cookies.get("access_token")
-    
-    if not token_with_bearer:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="جلسة العمل انتهت، يرجى تسجيل الدخول",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
 
-    token = token_with_bearer.replace("Bearer ", "")
+    token_with_bearer = request.cookies.get("access_token")
+
+    if not token_with_bearer and not token_from_header:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+
+    if token_with_bearer:
+        token = token_with_bearer.replace("Bearer ", "")
+    else:
+        token = token_from_header
 
     try:
         payload = decode_access_token(token)
-        
+
         if payload.get("type") != "access":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="نوع التوكن غير صالح للوصول",
-            )
+            raise HTTPException(status_code=401)
 
-        user_id_str: str = payload.get("sub")
-        if user_id_str is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="فشل التحقق من هوية المستخدم",
-            )
-        
-        user_id = int(user_id_str)
+        user_id = int(payload.get("sub"))
 
-    except (JWTError, ValueError):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="التوكن منتهي الصلاحية أو غير صالح",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    except Exception:
+        raise HTTPException(status_code=401)
 
     statement = (
-        select(User)
-        .where(User.user_id == user_id)
-        .options(
-            selectinload(User.roles)
-            .selectinload(Roles.roles_permission)
-            .selectinload(Roles_Permission.permission)
-        )
+    select(User)
+    .where(User.user_id == user_id)
+    .options(
+        selectinload(User.roles)
+        .selectinload(Roles.roles_permission)
+        .selectinload(Roles_Permission.permission)
     )
-    
+)
+
     result = await db.exec(statement)
     user = result.first()
 
-    if isinstance(user, tuple):
-        user = user[0]
-
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="المستخدم غير موجود في النظام",
-        )
+        raise HTTPException(status_code=401)
 
     return user
-
 class PermissionChecker:
     def __init__(self, required_permissions: str | list[str]):
         if isinstance(required_permissions, str):

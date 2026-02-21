@@ -30,8 +30,11 @@ async def login_user(email: str, password: str, db: AsyncSession, response: Resp
     if db_user.state_id != 1:
         raise HTTPException(status_code=403, detail="الحساب غير نشط")
 
-    access_token = create_access_token(data={"sub": str(db_user.user_id)})
-    refresh_token = create_refresh_token(data={"sub": str(db_user.user_id)})
+    access_token = create_access_token(data={"sub": str(db_user.user_id),"type": "access"}
+)
+
+    refresh_token = create_refresh_token(data={"sub": str(db_user.user_id),"type": "refresh"}
+)
 
     response.set_cookie(
         key="access_token",
@@ -53,7 +56,6 @@ async def login_user(email: str, password: str, db: AsyncSession, response: Resp
     )
 
     return {
-        "access_token": access_token,
         "token_type": "bearer",
         "user": {
             "user_id": db_user.user_id,

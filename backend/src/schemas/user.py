@@ -19,6 +19,7 @@ class UserCreate(BaseModel):
 class UserRead(BaseModel):
     
     user_id: int
+    name: str
     email: EmailStr
     role_name: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)

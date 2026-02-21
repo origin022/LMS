@@ -1,7 +1,7 @@
-from sqlmodel import Index, SQLModel , Field  , Relationship
+from sqlmodel import DateTime, Index, SQLModel , Field  , Relationship
 from datetime import datetime, timezone
 
-from typing import TYPE_CHECKING  ,List
+from typing import TYPE_CHECKING  
 if TYPE_CHECKING:
 
     from src.models.User import User
@@ -14,7 +14,8 @@ class Comment(SQLModel , table = True):
     lecture_id : int = Field(foreign_key='lecture.lecture_id', index=True , nullable=False)
     text :str = Field(nullable=False)
     submission_time: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None), 
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_type=DateTime(timezone=True) ,
         nullable=False
     )
     

@@ -1,7 +1,7 @@
 from enum import Enum
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import DateTime, SQLModel, Field, Relationship
 
 class TokenType(str, Enum):
     MAGIC_LINK = "magic_link"
@@ -14,5 +14,8 @@ class VerificationToken(SQLModel, table=True):
     token: str = Field(index=True, unique=True)
     email: str = Field(index=True) 
     type: TokenType = Field(default=TokenType.MAGIC_LINK)
-    expires_at: datetime
+    expires_at: datetime = Field(
+        sa_type=DateTime(timezone=True),
+        nullable=False
+    )
    

@@ -1,4 +1,3 @@
-from sqlalchemy import Column
 from sqlmodel import Field, Index, SQLModel , Relationship
 from sqlalchemy import DateTime
 
@@ -32,11 +31,8 @@ class User(SQLModel ,table = True) :
   phone :str = Field(nullable=False)
   hashed_passwored : str = Field( nullable=False , max_length=255)
   created_at: datetime = Field(
-    sa_column=Column(
-        DateTime(timezone=True),
-        nullable=False
-    ),
-    default_factory=lambda: datetime.now(timezone.utc)
+    default_factory=lambda: datetime.now(timezone.utc),
+    sa_type=DateTime(timezone=True), 
 )
   state_id : int   =Field(default=None , foreign_key="state.state_id" , index=True , nullable=False)
   roles_id : int =Field(default=None , foreign_key="roles.roles_id", index=True , nullable=False)
@@ -72,6 +68,6 @@ class User(SQLModel ,table = True) :
   custom_permissions: List["User_Permission"] = Relationship(back_populates="user")
 
   __table_args__ = (
-        Index("idx_user_state", "roles_id", "state_id"),
+        Index("idx_user_role", "roles_id"),
     )
   
