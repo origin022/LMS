@@ -48,3 +48,4 @@ jobs:
           SQLALCHEMY_DATABASE_URI: postgresql+asyncpg://postgres:password@localhost:5432/lms_test
           PYTHONPATH: .
         run: uv run pytest tests/ -v
+#hhgghg
