@@ -46,5 +46,5 @@ jobs:
         working-directory: ./backend    
         env:
           SQLALCHEMY_DATABASE_URI: postgresql+asyncpg://postgres:password@localhost:5432/lms_test
-          PYTHONPATH: .
+          PYTHONPATH: ${{ github.workspace }}/backend
         run: uv run pytest tests/test_main.py -v
