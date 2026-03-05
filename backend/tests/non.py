@@ -3,5 +3,7 @@ if(a=="mnmnmn"):
     print("mnmnmn")
 else:
     print("kkkkkk")
-    print("kkkkkثبىىبنثىبنثىنبىثk")
+    print("kkkkkثبىىبنثىبثىنبلىىلننلىنقىبنثىنبىثk")
+    print("asdfghjkl;")
+
     
