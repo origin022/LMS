@@ -27,9 +27,9 @@ async def init_db():
 @pytest.fixture
 async def client():
     async with async_session_maker() as session:
-        def getattr_session():
-            yield session
-        app.dependency_overrides[get_session] = getattr_session
+        app.dependency_overrides[get_session] = lambda: session 
+        
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
             yield ac
+            
         app.dependency_overrides.clear()

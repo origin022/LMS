@@ -39,12 +39,12 @@ jobs:
         run: uv python install 3.13
 
       - name: Install dependencies
-        working-directory: ./backend    # الدخول لمجلد الباكند
+        working-directory: ./backend           
         run: uv sync
 
       - name: Run Pytest
-        working-directory: ./backend    # تشغيل التيست من داخل مجلد الباكند
+        working-directory: ./backend    
         env:
-          # نستخدم 'localhost' لأن السيرفر يعمل على نفس الـ Runner
           SQLALCHEMY_DATABASE_URI: postgresql+asyncpg://postgres:password@localhost:5432/lms_test
-        run: uv run pytest tests/test.py -v
+          PYTHONPATH: .
+        run: uv run pytest tests/test_main.py -v

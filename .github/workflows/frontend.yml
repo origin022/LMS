@@ -21,7 +21,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm' # تسريع العملية عبر تخزين المكتبات مؤقتاً
+          cache: 'npm' 
           cache-dependency-path: './frontend/package-lock.json'
 
       - name: Install Dependencies
@@ -30,7 +30,6 @@ jobs:
 
       - name: Check Svelte Syntax (Check)
         working-directory: ./frontend
-        # إذا كنت تستخدم SvelteKit، هذا الأمر يفحص الـ Types والـ Syntax
         run: npm run check || echo "No check script found"
 
       - name: Build Svelte Project
