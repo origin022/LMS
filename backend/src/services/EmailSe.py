@@ -23,8 +23,7 @@ class EmailService:
        
         EmailService._setup_gmail()
         
-        magic_link = f"http://localhost:3000/{route}?token={token}"
-        
+        magic_link = f"http://localhost:5173/{route}?token={token}"
         gmail.send(
             subject=subject,
             receivers=[to_email],
@@ -41,14 +40,13 @@ class EmailService:
 
         if not token_record:
             raise HTTPException(status_code=400, detail="الرابط غير صحيح")
-        
-        current_time_naive = datetime.now(timezone.utc).replace(tzinfo=None)
 
-        if token_record.expires_at < current_time_naive:
+        current_time = datetime.now(timezone.utc)
+
+        if token_record.expires_at.astimezone(timezone.utc) < current_time:
             await db.delete(token_record)
             await db.commit()
             raise HTTPException(status_code=400, detail="الرابط منتهي الصلاحية")
-
 
         user_statement = select(User).where(User.email == token_record.email)
         user_result = await db.exec(user_statement)
@@ -57,10 +55,10 @@ class EmailService:
         if not user:
             raise HTTPException(status_code=404, detail="المستخدم غير موجود")
 
-        if user.roles_id == 4: 
+        if user.roles_id == 4:
             user.state_id = 1
             msg = "تم تفعيل حسابك كطالب بنجاح!"
-        elif user.roles_id == 3:  
+        elif user.roles_id == 3:
             user.state_id = 2
             msg = "تم تأكيد إيميلك، بانتظار موافقة المدير."
         else:
@@ -69,4 +67,5 @@ class EmailService:
 
         await db.delete(token_record)
         await db.commit()
+
         return {"message": msg, "state_id": user.state_id}

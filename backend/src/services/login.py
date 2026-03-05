@@ -1,65 +1,65 @@
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from fastapi import HTTPException, status,Response
-from starlette.concurrency import run_in_threadpool
 from sqlalchemy.orm import selectinload
-from src.core.config import config
+from fastapi import HTTPException, Response
+from starlette.concurrency import run_in_threadpool
 from src.models.User import User
-from src.core.security import create_refresh_token, verify_password, create_access_token 
+from src.models.Roles import Roles
+from src.core.security import (
+    verify_password,
+    create_access_token,
+    create_refresh_token
+)
 
-async def login_user(email: str, password: str, db: AsyncSession, response: Response):
-    statement = (
+async def authenticate_user(
+    email: str,
+    password: str,
+    db: AsyncSession
+) -> User:
+
+    stmt = (
         select(User)
         .where(User.email == email)
-        .options(selectinload(User.roles)) 
+        .options(selectinload(User.roles))
     )
-    
-    result = await db.exec(statement)
-    db_user = result.first() 
 
-    if not db_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="الإيميل أو كلمة المرور غير صحيحة",
-        )
+    result = await db.exec(stmt)
+    user = result.first()
 
-    is_valid = await run_in_threadpool(verify_password, password, db_user.hashed_passwored)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    is_valid = await run_in_threadpool(
+        verify_password,
+        password,
+        user.hashed_passwored
+    )
+
     if not is_valid:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="خطأ في البيانات")
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    if db_user.state_id != 1:
-        raise HTTPException(status_code=403, detail="الحساب غير نشط")
+    if user.state_id != 1:
+        raise HTTPException(status_code=403, detail="Account disabled")
 
-    access_token = create_access_token(data={"sub": str(db_user.user_id),"type": "access"}
-)
+    return user
 
-    refresh_token = create_refresh_token(data={"sub": str(db_user.user_id),"type": "refresh"}
-)
+
+def set_auth_cookies(response: Response, access: str, refresh: str):
 
     response.set_cookie(
         key="access_token",
-        value=f"Bearer {access_token}",
-        httponly=True, 
-        max_age=config.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        value=access,
+        httponly=True,
         samesite="lax",
-        secure=False  
+        secure=False,
+        path="/"
     )
 
     response.set_cookie(
         key="refresh_token",
-        value=refresh_token,
+        value=refresh,
         httponly=True,
-        max_age=config.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
-        path="/api/v1/auth/refresh",
         samesite="lax",
-        secure=False
+        secure=False,
+        path="/"
     )
-
-    return {
-        "token_type": "bearer",
-        "user": {
-            "user_id": db_user.user_id,
-            "email": db_user.email,
-            "role_name": db_user.roles.roles_name if db_user.roles else "User"
-        }
-    }

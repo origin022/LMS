@@ -1,13 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, Request
-from fastapi.security import OAuth2PasswordRequestForm 
+from fastapi import APIRouter, Depends, Response, Request, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel.ext.asyncio.session import AsyncSession
-from src.core.config import config 
-from src.core.security import create_access_token, decode_access_token
 from src.core.dep import get_session
-from src.schemas.login import Token
-from src.services.login import login_user
+from src.core.security import create_access_token, create_refresh_token, decode_token
+from src.services.login import authenticate_user, set_auth_cookies
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
 
 @router.post("/login")
 async def login(
@@ -15,55 +14,56 @@ async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_session)
 ):
-    return await login_user(
+
+    user = await authenticate_user(
         email=form_data.username,
         password=form_data.password,
-        db=db,
-        response=response
+        db=db
     )
+
+    access = create_access_token(user.user_id)
+    refresh = create_refresh_token(user.user_id)
+
+    set_auth_cookies(response, access, refresh)
+
+    return {
+        "user_id": user.user_id,
+        "email": user.email,
+        "role": user.roles.roles_name if user.roles else None
+    }
+
+
+@router.post("/refresh")
+async def refresh(
+    request: Request,
+    response: Response
+):
+
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(status_code=401)
+
+    payload = decode_token(refresh_token, expected_type="refresh")
+    user_id = int(payload.get("sub"))
+
+    new_access = create_access_token(user_id)
+
+    response.set_cookie(
+        key="access_token",
+        value=new_access,
+        httponly=True,
+        samesite="lax",
+        secure=False,
+        path="/"
+    )
+
+    return {"status": "refreshed"}
+
 
 @router.post("/logout")
 async def logout(response: Response):
-    response.delete_cookie(
-        key="access_token",
-        httponly=True,
-        samesite="lax"
-    )
-    response.delete_cookie(
-        key="refresh_token",
-        httponly=True,
-        path="/api/v1/auth/refresh", 
-        samesite="lax"
-    )
-    return {"message": "تم تسجيل الخروج بنجاح"}
 
-@router.post("/refresh")
-async def refresh_access_token(request: Request, response: Response):
-    refresh_token = request.cookies.get("refresh_token")
-    if not refresh_token:
-        raise HTTPException(status_code=401, detail="انتهت الجلسة، سجل دخولك مرة أخرى")
+    response.delete_cookie("access_token", path="/")
+    response.delete_cookie("refresh_token", path="/")
 
-    try:
-        payload = decode_access_token(refresh_token)
-        if payload.get("type") != "refresh":
-            raise HTTPException(status_code=401, detail="توكن غير صالح")
-        
-        user_id = payload.get("sub")
-        new_access = create_access_token(
-        data={
-            "sub": user_id,
-            "type": "access"
-        }
-)
-
-        response.set_cookie(
-            key="access_token",
-            value=f"Bearer {new_access}",
-            httponly=True,
-            max_age=config.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            samesite="lax"
-        )
-        return {"status": "success", "message": "تم تجديد الجلسة"}
-        
-    except Exception:
-        raise HTTPException(status_code=401, detail="فشل تجديد الجلسة")
+    return {"message": "Logged out"}

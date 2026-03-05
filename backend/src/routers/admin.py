@@ -10,7 +10,8 @@ from src.schemas.admin import (
     GetUsersResponse, 
     InvitationCreate, 
     InvitationResponse,
-    RoleCreateWithPermissions 
+    RoleCreateWithPermissions,
+    RoleRead 
 )
 from src.services.admin import AdminService
 
@@ -106,4 +107,13 @@ async def deactivate_manager(
     current_user = Depends(DELETE_MANAGER)
 ):
     return await AdminService.deactivate_manager(db, manager_id)
+
+
+
+@router.get("/admin/roles/invitable", response_model=List[RoleRead])
+async def get_roles_for_invite(
+    db: AsyncSession = Depends(get_session),
+    current_user = Depends(INVITE_MANAGER) 
+):
+    return await AdminService.get_invitable_roles(db)
 

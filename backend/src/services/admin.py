@@ -199,3 +199,16 @@ class AdminService:
     @staticmethod
     async def get_invitable_roles(db: AsyncSession):
         return (await db.exec(select(Roles).where(Roles.roles_id != 1, Roles.roles_id != 3))).all()
+    
+
+
+
+    @staticmethod
+    async def get_invitable_roles(db: AsyncSession):
+        statement = select(Roles).where(Roles.roles_name != "Super Admin" ,
+                                        Roles.roles_name != "Student",
+                                        Roles.roles_name != "Teacher"
+                                         
+                                          )
+        result = await db.exec(statement)
+        return result.all()

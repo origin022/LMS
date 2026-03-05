@@ -8,53 +8,38 @@ from src.models import Permission
 from src.models.Roles import Roles
 from src.models.Roles_Permission import Roles_Permission
 from src.models.User_Permission import User_Permission
-from src.core.security import decode_access_token
+from src.core.security import decode_token
 from src.core.dep import get_session
 from src.models.User import User
+from fastapi.security import OAuth2PasswordBearer
 
-oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="api/v1/auth/login",
-    auto_error=False
-)
+
 
 async def get_current_user(
     request: Request,
-    db: AsyncSession = Depends(get_session),
-    token_from_header: str | None = Depends(oauth2_scheme)
+    db: AsyncSession = Depends(get_session)
 ) -> User:
+    
 
-    token_with_bearer = request.cookies.get("access_token")
 
-    if not token_with_bearer and not token_from_header:
-        raise HTTPException(status_code=401, detail="غير مصرح")
-
-    if token_with_bearer:
-        token = token_with_bearer.replace("Bearer ", "")
-    else:
-        token = token_from_header
-
-    try:
-        payload = decode_access_token(token)
-
-        if payload.get("type") != "access":
-            raise HTTPException(status_code=401)
-
-        user_id = int(payload.get("sub"))
-
-    except Exception:
+    token = request.cookies.get("access_token")
+    if not token:
         raise HTTPException(status_code=401)
 
-    statement = (
-    select(User)
-    .where(User.user_id == user_id)
-    .options(
-        selectinload(User.roles)
-        .selectinload(Roles.roles_permission)
-        .selectinload(Roles_Permission.permission)
-    )
-)
+    payload = decode_token(token, expected_type="access")
+    user_id = int(payload.get("sub"))
 
-    result = await db.exec(statement)
+    stmt = (
+        select(User)
+        .where(User.user_id == user_id)
+        .options(
+            selectinload(User.roles)
+            .selectinload(Roles.roles_permission)
+            .selectinload(Roles_Permission.permission)
+        )
+    )
+
+    result = await db.exec(stmt)
     user = result.first()
 
     if not user:

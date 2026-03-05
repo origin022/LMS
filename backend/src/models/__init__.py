@@ -18,3 +18,4 @@ from .User import User
 from src.models.Media import Media
 from src.models.Question import Question
 from src.models.Question_Option import Question_Option
+from sqlmodel import SQLModel

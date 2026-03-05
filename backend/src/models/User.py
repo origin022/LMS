@@ -3,8 +3,6 @@ from sqlalchemy import DateTime
 
 from typing import TYPE_CHECKING  ,List, Optional
 from datetime import datetime, timezone
-from src.models.Roles import Roles
-from src.models.State import State
 
 
 
@@ -25,6 +23,7 @@ if TYPE_CHECKING:
     from src.models.Class_Manager import Class_Manager
 
 class User(SQLModel ,table = True) :
+  __tablename__ = "user"
   user_id : int | None = Field(default=None , primary_key=True)
   name : str = Field( nullable=False,max_length=100)
   email : str = Field(max_length=100 , unique=True , index=True)

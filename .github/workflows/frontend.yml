@@ -1,0 +1,38 @@
+name: Frontend Build Check (Svelte)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'frontend/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'frontend/**'
+
+jobs:
+  check-svelte:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm' # تسريع العملية عبر تخزين المكتبات مؤقتاً
+          cache-dependency-path: './frontend/package-lock.json'
+
+      - name: Install Dependencies
+        working-directory: ./frontend
+        run: npm install
+
+      - name: Check Svelte Syntax (Check)
+        working-directory: ./frontend
+        # إذا كنت تستخدم SvelteKit، هذا الأمر يفحص الـ Types والـ Syntax
+        run: npm run check || echo "No check script found"
+
+      - name: Build Svelte Project
+        working-directory: ./frontend
+        run: npm run build

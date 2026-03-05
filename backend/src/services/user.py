@@ -3,7 +3,7 @@ from sqlmodel import  select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
-from src.models.VerificationTok import VerificationToken
+from src.models.VerificationTok import TokenType, VerificationToken
 from src.services.EmailSe import EmailService
 from src.models.User import User
 from src.schemas.user import UserCreate, UserInvitationRegister
@@ -44,7 +44,7 @@ async def create_new_user(
         token=raw_token,
         email=new_user.email,
         expires_at=expires, 
-        type="verification_entry"
+        type=TokenType.MAGIC_LINK
     )
     db.add(verification_entry)
 

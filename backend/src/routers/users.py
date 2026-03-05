@@ -4,7 +4,7 @@ from sqlmodel import select
 from src.schemas.admin import ClassroomRead
 from src.services.admin import AdminService
 from src.core.auth import PermissionChecker
-from src.schemas.teacher import CourseRead, CourseWithLectures, LectureRead
+from src.schemas.teacher import CourseRead, CourseWithLectures, LectureRead, LectureSimple
 from src.services.teacher import TeacherService
 from src.models import Media
 from src.core.dep import get_session
@@ -84,6 +84,12 @@ async def get_full_course_details(
     db: AsyncSession = Depends(get_session)
 ):
     return await TeacherService.get_course(db, class_id)
+@router.get("/lectures/latest", response_model=list[LectureSimple])
+async def get_recent_lectures(
+    db: AsyncSession = Depends(get_session),
+    limit: int = 6
+):
+    return await TeacherService.get_all_recent_lectures(db, limit)
 
 
 @router.get("/lectures/{lecture_id}",response_model=LectureRead)
@@ -92,6 +98,9 @@ async def get_full_lecture_details(
     db: AsyncSession = Depends(get_session)
 ):
     return await TeacherService.get_lecture_details(db, lecture_id)
+
+
+
 
 
 

@@ -50,3 +50,8 @@ class ClassroomUpdate(BaseModel):
 class RoleUpdate(BaseModel):
     roles_name: Optional[str] = None
     permission_id: Optional[List[int]] = None
+
+
+class RoleRead(BaseModel):
+    roles_id: int
+    roles_name: str

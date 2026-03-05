@@ -1,50 +1,60 @@
-
-from datetime import datetime, timedelta, timezone 
+from datetime import datetime, timedelta, timezone
 from typing import Optional
+from jose import jwt, JWTError
 from passlib.context import CryptContext
-from jose import JWTError, jwt
-from fastapi import HTTPException
-from sqlmodel import select
-
-from .config import config  
+from fastapi import HTTPException, status
+from .config import config
+from sqlalchemy import select
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
-
-def hash_password(password: str):
+def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
-def verify_password(plain_password: str, hashed_password: str) :
+def verify_password(password: str, hashed: str) -> bool:
+    return pwd_context.verify(password, hashed)
 
-    return pwd_context.verify(plain_password, hashed_password)
 
-
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) :
+def _create_token(data: dict, expires_delta: timedelta, token_type: str) -> str:
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=config.ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire , "type": "access"})
-    encoded_jwt = jwt.encode(to_encode, config.SECRET_KEY, algorithm=config.ALGORITHM)
-    return encoded_jwt
-
-def decode_access_token(token: str) :
-
-    try:
-        payload = jwt.decode(token, config.SECRET_KEY, algorithms=[config.ALGORITHM])
-        return payload
-    except JWTError as e:
-        raise ValueError("invalied token") from e
-
-
-
-def create_refresh_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(days=config.REFRESH_TOKEN_EXPIRE_DAYS)
-    to_encode.update({"exp": expire, "type": "refresh"}) 
+    expire = datetime.now(timezone.utc) + expires_delta
+    to_encode.update({
+        "exp": expire,
+        "type": token_type
+    })
     return jwt.encode(to_encode, config.SECRET_KEY, algorithm=config.ALGORITHM)
 
+
+def create_access_token(user_id: int) -> str:
+    return _create_token(
+        data={"sub": str(user_id)},
+        expires_delta=timedelta(minutes=config.ACCESS_TOKEN_EXPIRE_MINUTES),
+        token_type="access"
+    )
+
+
+def create_refresh_token(user_id: int) -> str:
+    return _create_token(
+        data={"sub": str(user_id)},
+        expires_delta=timedelta(days=config.REFRESH_TOKEN_EXPIRE_DAYS),
+        token_type="refresh"
+    )
+
+
+def decode_token(token: str, expected_type: str) -> dict:
+    try:
+        payload = jwt.decode(
+            token,
+            config.SECRET_KEY,
+            algorithms=[config.ALGORITHM]
+        )
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    if payload.get("type") != expected_type:
+        raise HTTPException(status_code=401, detail="Invalid token type")
+
+    return payload
 
 
 

@@ -1,5 +1,6 @@
 import json
 import os
+from sympy import limit
 import torch
 from groq import Groq
 import whisper
@@ -18,7 +19,7 @@ from src.models.Quiz import Quiz
 from src.models.Question import Question
 from src.models.Question_Option import Question_Option
 from src.models.Course import Course
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
 from src.schemas.teacher import CourseCreate, CourseUpdate, LectureCreate, LectureUpdate, OptionUpdate, QuestionUpdate, QuizGenerateRequest, QuizUpdate
 from src.core.config import config
 
@@ -408,3 +409,20 @@ class TeacherService:
             await session.rollback()
             print(f"GROQ ERROR: {str(e)}")
             raise HTTPException(status_code=500, detail=f"فشل التوليد: {str(e)}")
+        
+
+
+
+
+
+
+    @staticmethod
+    async def get_all_recent_lectures(db: AsyncSession, limit: int):
+        statement = (
+            select(Lecture)
+            .options(joinedload(Lecture.course)) 
+            .order_by(Lecture.lecture_id.desc())
+            .limit(limit)
+        )
+        result = await db.exec(statement)
+        return result.all()

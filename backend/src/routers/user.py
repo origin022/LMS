@@ -28,6 +28,7 @@ async def register_user(
 
     return {
         "user_id": user.user_id,
+        "name": user.name,
         "email": user.email,
         "role_name": user.roles.roles_name
     }
@@ -48,4 +49,4 @@ async def verify_email(
     token: str, 
     db: AsyncSession = Depends(get_session)
 ):
-    return await EmailService.send_universal_mail(token, db)
+    return await EmailService.verify_user_email(token, db)

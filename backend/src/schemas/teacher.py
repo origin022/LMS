@@ -22,6 +22,16 @@ class MediaRead(BaseModel):
     mime_type: str
     created_at: datetime
 
+class CourseMin(BaseModel):
+    name: str
+
+class LectureSimple(BaseModel):
+    lecture_id: int
+    title: str
+    description: Optional[str]
+    created_at: datetime
+    course: Optional[CourseMin] 
+    model_config = ConfigDict(from_attributes=True)
 
 class LectureRead(BaseModel):
     lecture_id: int
