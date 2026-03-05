@@ -1,5 +1,5 @@
 a="lalal"
-if(a=="lalal"):
-    print("lalal")
+if(a=="mnmnmn"):
+    print("mnmnmn")
 else:
-    print("lolol")
+    print("kkkkkk")
