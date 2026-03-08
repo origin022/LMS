@@ -4,5 +4,6 @@ if(a=="mnmnmn"):
 else:
     print("lalal")
     print("lalتتيتيal")
+    print("lalتتيتيal")
 
     

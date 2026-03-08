@@ -2,10 +2,10 @@ services:
   db:
     image: postgres:18-alpine
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=12345
-      - POSTGRES_DB=lms
-      - PGDATA=/var/lib/postgresql/data/pgdata
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: lms
+      PGDATA: /var/lib/postgresql/data/pgdata
 
     ports:
       - "5433:5432"
@@ -18,6 +18,23 @@ services:
       - db
     ports:
       - "8000:8000"
+
+    environment:
+      SECRET_KEY: ${SECRET_KEY}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_FROM: ${MAIL_FROM}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS}
+      DATABASE_URL: ${DATABASE_URL}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_SERVER: ${POSTGRES_SERVER}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
+
     volumes:
       - ./backend:/app
       - ./tests:/app/tests
@@ -28,9 +45,8 @@ services:
       - backend
     ports:
       - "80:80"
-
     volumes:
       - ./frontend:/app
 
 volumes:
-  lms_postgres_data: 
+  lms_postgres_data:
