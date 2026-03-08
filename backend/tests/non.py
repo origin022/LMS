@@ -5,5 +5,8 @@ else:
     print("lalal")
     print("lalتتيتيal")
     print("lalتتيتيal")
+    print("lalتتيتيal")
+    print("lalتتيتيal")
+    print("lalتتيتيal")
 
     
