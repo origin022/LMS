@@ -1,65 +1,37 @@
-name: Backend Tests
+name: Backend Dockerized Tests
 
 on:
   push:
     branches: [ main, dev ]
-    paths:
-      - 'backend/**'
+    paths: ['backend/**']
   pull_request:
     branches: [ main ]
-    paths:
-      - 'backend/**'
 
 jobs:
   test:
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:latest
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: lms_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    env:
-      SECRET_KEY: ${{ secrets.SECRET_KEY }}
-      ACCESS_TOKEN_EXPIRE_MINUTES: 30
-      REFRESH_TOKEN_EXPIRE_DAYS: 7
-      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-      MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
-      MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
-      MAIL_FROM: ${{ secrets.MAIL_FROM }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
+      # خطوة مهمة: إنشاء ملف .env وهمي لكي لا يعترض دوكر كومبوز
+      - name: Create dummy .env file
+        run: |
+          echo "POSTGRES_USER=postgres" >> .env
+          echo "POSTGRES_PASSWORD=12345" >> .env
+          echo "POSTGRES_DB=lms" >> .env
+          echo "DATABASE_URL=postgresql+asyncpg://postgres:12345@db:5432/lms" >> .env
 
-      - name: Set up Python
-        run: uv python install 3.13
+      - name: Start Services
+        run: |
+          docker compose up -d db backend
+          # ننتظر التأكد من أن قاعدة البيانات جاهزة لاستقبال الاتصالات
+          sleep 20 
 
-      - name: Install dependencies
-        working-directory: ./backend           
-        run: uv sync
-
-      - name: Create media directory
-        working-directory: ./backend
-        run: mkdir -p media
-
-      - name: Run Pytest
-        working-directory: ./backend    
+      - name: Run Pytest inside Container
+        run: |
+          docker compose exec -T backend uv run pytest tests/ -v
         env:
-          SQLALCHEMY_DATABASE_URI: postgresql+asyncpg://postgres:password@localhost:5432/lms_test
+          # نمرر رابط قاعدة البيانات الخاص بالتست
+          SQLALCHEMY_DATABASE_URI: postgresql+asyncpg://postgres:12345@db:5432/lms
           PYTHONPATH: .
-        run: uv run pytest tests/ -v
