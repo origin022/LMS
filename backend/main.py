@@ -12,7 +12,6 @@ from src.routers import student as student_router
 from src.models.Quiz_Attempt import Quiz_Attempt
 from fastapi.middleware.cors import CORSMiddleware
 from src.core.config import config
-print(f"DEBUG: Connecting to: {config.SQLALCHEMY_DATABASE_URI}")
 
 Quiz_Attempt.model_rebuild()
 
@@ -40,6 +39,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+import os
+os.makedirs("media", exist_ok=True)
 app.mount("/media", StaticFiles(directory="media"), name="media")
 
 
