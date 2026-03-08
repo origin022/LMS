@@ -4,6 +4,7 @@ if(a=="mnmnmn"):
 else:
     print("kkkkkk")
     print("kkkkkثبىىبنثىبثىنبلىىلننلىنقىبنثىنبىثk")
+    print("kkkkkثبىىبنثىبثىنبلىىلننلىنقىبنثىنبىثk")
     print("asdfghjkl;")
     print("asdfghjkةثننثبنثl;")
 
