@@ -5,5 +5,6 @@ else:
     print("kkkkkk")
     print("kkkkkثبىىبنثىبثىنبلىىلننلىنقىبنثىنبىثk")
     print("asdfghjkl;")
+    print("asdfghjkةثننثبنثl;")
 
     
