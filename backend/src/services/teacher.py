@@ -1,9 +1,7 @@
 import json
 import os
 from sympy import limit
-import torch
 from groq import Groq
-import whisper
 import shutil
 from src.core.dep import engine
 import uuid
@@ -260,38 +258,36 @@ class TeacherService:
 
         return await TeacherService._update_entity(db, Question_Option, option_id, data, "option_id")
     
-
-
-
-    @staticmethod
-    async def process_video_transcription(lecture_id: int, file_path: str):
-        try:
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-            print(f"⚙️ AI Engine is running on: {device.upper()}")
-        
-            abs_file_path = os.path.abspath(file_path)
-        
-            model = whisper.load_model("base").to(device)
-        
-            result = model.transcribe(
-                abs_file_path, 
-                language="ar", 
-                fp16=(device == "cuda") 
-            )
-            transcribed_text = result["text"]
-
-            async with AsyncSession(engine) as db:
-                statement = select(Lecture).where(Lecture.lecture_id == lecture_id)
-                res = await db.exec(statement)
-                lecture = res.first()
+        @staticmethod
+        async def process_video_transcription(lecture_id: int, file_path: str):
+            try:
+                print(f"🚀 البدء بمعالجة الفيديو عبر Groq API: {file_path}")
             
-                if lecture:
-                    lecture.text = transcribed_text
-                    await db.commit()
-                    print(f"✅ تم تحديث النص للمحاضرة {lecture_id} بنجاح")
+            # فتح ملف الفيديو/الصوت لإرساله
+                with open(file_path, "rb") as file:
+                # إرسال الطلب لـ Groq (يدعم ملفات حتى 25MB)
+                    transcription = groq_client.audio.transcriptions.create(
+                        file=(os.path.basename(file_path), file.read()),
+                        model="whisper-large-v3",
+                        language="ar",
+                        response_format="text",
+                    )
 
-        except Exception as e:
-            print(f" خطأ في عملية التحويل: {str(e)}")
+                transcribed_text = transcription
+
+            # تحديث قاعدة البيانات بالنص المستخرج
+                async with AsyncSession(engine) as db:
+                    statement = select(Lecture).where(Lecture.lecture_id == lecture_id)
+                    res = await db.exec(statement)
+                    lecture = res.first()
+                
+                    if lecture:
+                        lecture.text = transcribed_text
+                        await db.commit()
+                        print(f"✅ تم تحديث نص المحاضرة {lecture_id} بنجاح")
+
+            except Exception as e:
+                print(f"❌ خطأ في معالجة Groq: {str(e)}")
 
     
     @staticmethod

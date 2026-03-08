@@ -11,7 +11,7 @@ class Config(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=os.path.join(BASE_DIR, ".env"),
         env_file_encoding="utf-8",
-        case_sensitive=True, 
+        case_sensitive=False, 
         extra="ignore"
     )
 
@@ -25,14 +25,14 @@ class Config(BaseSettings):
     GROQ_API_KEY: str
  
  
-    POSTGRES_USER: str = "postgres"
+    POSTGRES_USER: str
     POSTGRES_PASSWORD: str 
-    POSTGRES_SERVER: str = "127.0.0.1"
-    POSTGRES_PORT: int = 5432
-    POSTGRES_DB: str = "lms"
+    POSTGRES_SERVER: str
+    POSTGRES_PORT: int
+    POSTGRES_DB: str
 
     @property
-    def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn: 
+    def SQLALCHEMY_DATABASE_URI(self) -> str: # حولها إلى str لسهولة التعامل
         return (
             f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
             f"{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"

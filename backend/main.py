@@ -11,6 +11,8 @@ from src.routers import interaction as interaction_router
 from src.routers import student as student_router
 from src.models.Quiz_Attempt import Quiz_Attempt
 from fastapi.middleware.cors import CORSMiddleware
+from src.core.config import config
+print(f"DEBUG: Connecting to: {config.SQLALCHEMY_DATABASE_URI}")
 
 Quiz_Attempt.model_rebuild()
 
@@ -26,10 +28,15 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+       "http://localhost",          # بدون بورت (كما يظهر في الـ Referer عندك)
+        "http://localhost:5173",     # بورت Vite الافتراضي
+        "http://127.0.0.1",
         "http://127.0.0.1:5173",
-        "http://localhost:5173"
+        "http://[::1]",             # دعم IPv6 بدون بورت
+        "http://[::1]:5173",
     ],
     allow_credentials=True,
+    allow_origin_regex="http://localhost:.*",
     allow_methods=["*"],
     allow_headers=["*"],
 )

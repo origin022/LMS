@@ -5,10 +5,11 @@ description = "LMS Backend"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi>=0.120.0",
+    "fastapi[standard]>=0.120.0",
     "uvicorn>=0.38.0",
     "sqlmodel>=0.0.27",
     "psycopg[binary]>=3.2.12",
+    "sympy>=1.12",
     "python-jose[cryptography]>=3.5.0",
     "pydantic-settings>=2.12.0",
     "email-validator>=2.3.0",
@@ -17,21 +18,14 @@ dependencies = [
     "cryptography>=46.0.3",
     "python-multipart>=0.0.21",
     "redmail>=0.6.0",
-    "pytest>=9.0.2",
-    "pytest-asyncio>=1.3.0",
-    "httpx>=0.28.1",
-    "openai-whisper>=20250625",
     "google-generativeai>=0.8.6",
     "python-dotenv>=1.2.1",
-    "google-genai>=1.62.0",
     "alembic>=1.18.4",
-    "psycopg2-binary>=2.9.11",
     "groq>=1.0.0",
 ]
 
 [tool.uv]
-# هذا السطر يخبر uv أن هذا تطبيق وليس حزمة، فلا يبحث عن مجلد src/lms
-package = false 
+package = false
 
 [build-system]
 requires = ["hatchling"]

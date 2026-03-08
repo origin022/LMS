@@ -22,5 +22,5 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
         headers
     };
 
-    return fetch(`${BASE_URL}${endpoint}`, defaultOptions);
+    return fetch(`${BASE_URL}/${endpoint.replace(/^\//, '')}`, defaultOptions);
 } 
