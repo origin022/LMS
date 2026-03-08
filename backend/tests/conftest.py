@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from main import app
 from src.core.dep import get_session
 from src.core.config import config
-engine = create_async_engine("postgresql+asyncpg://postgres:password@localhost:5432/lms_test")
+engine = create_async_engine("postgresql+asyncpg://postgres:12345@db:5432/lms")
 async_session_maker = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 @pytest.fixture(scope="session")

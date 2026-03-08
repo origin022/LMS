@@ -3,11 +3,12 @@ name: Backend Dockerized Tests
 on:
   push:
     branches: [ main, dev ]
-    paths: ['backend/**', 'tests/**'] # أضفنا مسار التست هنا
+    paths: ['backend/**', 'tests/**']
 
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -21,17 +22,12 @@ jobs:
 
       - name: Build and Start Services
         run: |
-          # نستخدم --build لضمان تحديث الكود داخل الحاوية في GitHub
           docker compose up --build -d db backend
-          sleep 30 
-
-      - name: Copy Tests to Container
-        # بما أن التست خارج مجلد الباكند، نقوم بنسخه يدوياً داخل الحاوية للتشغيل
-        run: docker cp tests/. lms-backend-1:/app/tests/
+          sleep 20
 
       - name: Run Pytest inside Container
         run: |
-          docker compose exec -T backend uv run pytest tests/ -v
+          docker compose exec -T backend uv run pytest /app/tests -v
         env:
           SQLALCHEMY_DATABASE_URI: postgresql+asyncpg://postgres:12345@db:5432/lms
           PYTHONPATH: .
