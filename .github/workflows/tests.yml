@@ -25,6 +25,12 @@ jobs:
           docker compose up --build -d db backend
           sleep 20
 
+      - name: Debug containers
+        run: |
+          docker compose ps
+          docker compose logs backend
+          docker compose logs db
+
       - name: Run Pytest inside Container
         run: |
           docker compose exec -T backend uv run pytest /app/tests -v
