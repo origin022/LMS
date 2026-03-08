@@ -22,7 +22,7 @@ jobs:
 
       - name: Build and Start Services
         run: |
-          docker compose up --build -d db backend
+          docker compose --env-file .env up --build -d db backend
           sleep 20
 
       - name: Debug containers
