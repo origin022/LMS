@@ -45,9 +45,8 @@ jobs:
 
       - name: Run Backend Pytest
         run: |
-          # تنفيذ التست داخل الحاوية
-          # ملاحظة: PYTHONPATH معرف مسبقاً في Dockerfile كـ /app/src
-          docker compose exec -T backend uv run pytest tests/ -v
+          # لاحظ حذف كلمة uv run لأن المكتبات مثبتة في النظام
+          docker compose exec -T backend pytest tests/ -v
         env:
           PYTHONPATH: src
 
