@@ -1,4 +1,4 @@
-name: Backend Tests
+name: Backend Dockerized Tests
 
 on:
   push:
@@ -13,28 +13,13 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:latest
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: lms_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
+    
+    # تعريف المتغيرات التي يحتاجها الـ Compose والـ Dockerfile
     env:
+      POSTGRES_PASSWORD: password
       SECRET_KEY: ${{ secrets.SECRET_KEY }}
-      ACCESS_TOKEN_EXPIRE_MINUTES: 30
-      REFRESH_TOKEN_EXPIRE_DAYS: 7
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@db:5432/lms
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
       MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
       MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
       MAIL_FROM: ${{ secrets.MAIL_FROM }}
@@ -43,23 +28,33 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
+      - name: Build and Start Services
+        # بناء وتشغيل الباك أند والقاعدة كما هو معرف في docker-compose.yml
+        run: docker compose up --build -d db backend
 
-      - name: Set up Python
-        run: uv python install 3.13
+      - name: Wait for Services (Health Check)
+        run: |
+          # الانتظار حتى تصبح قاعدة البيانات جاهزة تماماً
+          echo "Waiting for DB..."
+          docker compose exec -T db sh -c "until pg_isready -U postgres -d lms; do sleep 1; done"
+          
+          # التأكد من أن الباك أند لم ينهار عند الإقلاع
+          if [ "$(docker inspect -f '{{.State.Running}}' $(docker compose ps -q backend))" != "true" ]; then
+            echo "❌ Backend container crashed! Logs:"
+            docker compose logs backend
+            exit 1
+          fi
 
-      - name: Install dependencies
-        working-directory: ./backend           
-        run: uv sync
-
-      - name: Create media directory
-        working-directory: ./backend
-        run: mkdir -p media
-
-      - name: Run Pytest
-        working-directory: ./backend    
+      - name: Run Pytest inside Container
+        # هنا ننفذ التست "داخل" الحاوية لضمان تطابق البيئة
+        run: |
+          docker compose exec -T backend pytest tests/ -v
         env:
-          SQLALCHEMY_DATABASE_URI: postgresql+asyncpg://postgres:password@localhost:5432/lms_test
-          PYTHONPATH: .
-        run: uv run pytest tests/ -v
+          # نمرر المسار البرمجي لكي يجد pytest الموديلات داخل src
+          PYTHONPATH: /app
+
+      - name: Check Logs on Failure
+        if: failure()
+        run: |
+          docker compose logs backend
+          docker compose logs db

@@ -1,0 +1,30 @@
+# Dependencies
+**/node_modules
+**/.svelte-kit
+**/.venv
+**/venv
+**/env
+
+# Python Cache
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+
+# Data & Databases
+**/backend/data
+**/*.db
+**/*.sqlite3
+**/lms_postgres_data/
+
+# Secrets & Local Configs
+**/.env
+**/.env.*
+! .env.example
+
+# IDEs & System
+.git
+.gitignore
+.idea
+.vscode
+**/.DS_Store

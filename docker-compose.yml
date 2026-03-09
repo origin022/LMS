@@ -1,0 +1,60 @@
+services:
+  db:
+    image: postgres:16-alpine # تم التصحيح لنسخة مستقرة
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: lms
+    ports:
+      - "5433:5432"
+    healthcheck:
+      # مهم جداً لضمان عدم تشغيل الباك اند قبل جهوزية القاعدة
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d lms" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - lms_postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend # الكونتكست داخل مجلد الباك اند مباشرة
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@db:5432/lms
+      POSTGRES_SERVER: db
+      PYTHONPATH: /app # لكي يرى الكود الموديلات بشكل صحيح
+      SECRET_KEY: ${SECRET_KEY}
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      REFRESH_TOKEN_EXPIRE_DAYS: 7
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: lms
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_FROM: ${MAIL_FROM}
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: dev # استهداف مرحلة التطوير لتفعيل التحديث التلقائي (HMR)
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # لمنع الكتابة فوق موديولات النود داخل الحاوية
+
+volumes:
+  lms_postgres_data:

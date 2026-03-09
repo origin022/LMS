@@ -1,14 +1,16 @@
-import asyncio
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from logging.config import fileConfig
-from sqlalchemy import pool, create_engine
+import asyncio
+from sqlalchemy import pool
+from sqlalchemy.engine import Connection
+from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
-
-# 1. استيراد كائن الإعدادات الخاص بك (تأكد من المسار الصحيح)
-from src.core.config import config as app_config
-
-# 2. استيراد الموديلات (المهم جداً لـ autogenerate)
 from sqlmodel import SQLModel
-# الاستيرادات التي وضعتها أنت ضرورية لضمان تسجيلها في MetaData
+
 from src.models.Roles import Roles
 from src.models.User import User
 from src.models.Like import Like
@@ -33,48 +35,58 @@ from src.models.Invitation import Invitation
 from src.models.VerificationTok import VerificationToken
 from src.models.Student_Mastery import Student_Mastery
 
-# إعدادات ألمبيك
+# الإعدادات الأساسية
 config = context.config
-
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+# الربط الصحيح للميتاداتا
 target_metadata = SQLModel.metadata
 
-def get_url():
-    """جلب الرابط وتحويله من asyncpg إلى psycopg2 لعمل الهجرات"""
-    url = str(app_config.SQLALCHEMY_DATABASE_URI)
-    if "+asyncpg" in url:
-        url = url.replace("+asyncpg", "+psycopg2")
-    return url
+# الرابط الثابت للدوكر
+DATABASE_URL = "postgresql+asyncpg://postgres:12345@db:5432/lms"
+config.set_main_option("sqlalchemy.url", DATABASE_URL)
 
 def run_migrations_offline() -> None:
-    url = get_url()
+    url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
-
     with context.begin_transaction():
         context.run_migrations()
 
-def run_migrations_online() -> None:
-    """تشغيل الهجرات في وضع الـ Online باستخدام محرك متزامن"""
-    connectable = create_engine(
-        get_url(),
+def do_run_migrations(connection: Connection):
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata
+    )
+    with context.begin_transaction():
+        context.run_migrations()
+
+async def run_async_migrations():
+    connectable = async_engine_from_config(
+        config.get_section(config.config_ini_section),
+        prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
+    async with connectable.connect() as connection:
+        await connection.run_sync(do_run_migrations)
+    await connectable.dispose()
 
-    with connectable.connect() as connection:
-        context.configure(
-            connection=connection, 
-            target_metadata=target_metadata
-        )
+def run_migrations_online():
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
 
-        with context.begin_transaction():
-            context.run_migrations()
+    if loop and loop.is_running():
+        # في بيئة الدوكر يفضل استخدام run_sync أو التأكد من الـ loop
+        asyncio.run(run_async_migrations())
+    else:
+        asyncio.run(run_async_migrations())
 
 if context.is_offline_mode():
     run_migrations_offline()
