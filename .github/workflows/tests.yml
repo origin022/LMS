@@ -3,51 +3,59 @@ name: Backend Dockerized Tests
 on:
   push:
     branches: [ main, dev ]
+    paths:
+      - 'backend/**'
   pull_request:
     branches: [ main ]
+    paths:
+      - 'backend/**'
 
 jobs:
   test:
     runs-on: ubuntu-latest
-
+    
+    # تعريف المتغيرات التي يحتاجها الـ Compose والـ Dockerfile
     env:
-      # متغيرات ضرورية لكي لا ينهار الباك إند عند الإقلاع
-      POSTGRES_PASSWORD: test_password
+      POSTGRES_PASSWORD: password
       SECRET_KEY: ${{ secrets.SECRET_KEY || 'test_secret_key_123' }}
-      DATABASE_URL: postgresql://postgres:test_password@db:5432/lms
-      BACKEND_VOLUME_PATH: /tmp/ignore_me 
+      DATABASE_URL: postgresql://postgres:password@db:5432/lms
+      # هذا المسار الوهمي مهم جداً لمنع الـ Volume من مسح الكود داخل الحاوية في CI
+      BACKEND_VOLUME_PATH: /tmp/ignore_me
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+      MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+      MAIL_FROM: ${{ secrets.MAIL_FROM }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create Dummy Dir for CI
+      - name: Setup CI Directory
         run: mkdir -p /tmp/ignore_me
 
       - name: Build and Start Services
-        run: |
-          # بناء وتشغيل الباك إند والقاعدة فقط
-          docker compose up --build -d db backend
+        # بناء وتشغيل الباك أند والقاعدة كما هو معرف في docker-compose.yml
+        run: docker compose up --build -d db backend
 
-      - name: Wait for Services to be Ready
+      - name: Wait for Services (Health Check)
         run: |
-          # 1. التأكد من جاهزية قاعدة البيانات
-          echo "Waiting for Postgres..."
-          docker compose exec -T db sh -c "until pg_isready -U postgres; do sleep 1; done"
+          # الانتظار حتى تصبح قاعدة البيانات جاهزة تماماً
+          echo "Waiting for DB..."
+          docker compose exec -T db sh -c "until pg_isready -U postgres -d lms; do sleep 1; done"
           
-          # 2. التأكد من أن الباك إند مستقر ولم ينهر (Crashed)
-          echo "Checking Backend status..."
+          # التأكد من أن الباك أند لم ينهار عند الإقلاع
           if [ "$(docker inspect -f '{{.State.Running}}' $(docker compose ps -q backend))" != "true" ]; then
-            echo "❌ Backend container crashed! Showing logs:"
+            echo "❌ Backend container crashed! Logs:"
             docker compose logs backend
             exit 1
           fi
 
-      - name: Run Backend Pytest
+      - name: Run Pytest inside Container
+        # هنا ننفذ التست "داخل" الحاوية لضمان تطابق البيئة
         run: |
-          # نستخدم pytest مباشرة لأنه الآن متاح في الـ PATH العام للحاوية
           docker compose exec -T backend pytest tests/ -v
         env:
+          # نمرر المسار البرمجي لكي يجد pytest الموديلات داخل src
           PYTHONPATH: src
 
       - name: Check Logs on Failure
