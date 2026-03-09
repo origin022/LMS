@@ -11,6 +11,8 @@ ENV PATH="/root/.local/bin/:$PATH"
 WORKDIR /app
 COPY pyproject.toml ./
 
+
+COPY ./tests /app/tests
 # مزامنة المكتبات بدون --frozen للسماح بإنشاء ملف قفل جديد وخفيف
 RUN uv sync
 
