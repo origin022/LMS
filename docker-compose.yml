@@ -29,6 +29,17 @@ services:
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@db:5432/lms
       POSTGRES_SERVER: db
       PYTHONPATH: /app # لكي يرى الكود الموديلات بشكل صحيح
+      SECRET_KEY: ${SECRET_KEY}
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      REFRESH_TOKEN_EXPIRE_DAYS: 7
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: lms
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_FROM: ${MAIL_FROM}
     volumes:
       - ./backend:/app
 
