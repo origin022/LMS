@@ -1,52 +1,48 @@
 services:
   db:
-    image: postgres:18-alpine
+    image: postgres:16-alpine # تم التصحيح لنسخة مستقرة
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
       POSTGRES_DB: lms
-      PGDATA: /var/lib/postgresql/data/pgdata
-
     ports:
       - "5433:5432"
+    healthcheck: # مهم جداً لضمان عدم تشغيل الباك اند قبل جهوزية القاعدة
+      test: ["CMD-SHELL", "pg_isready -U postgres -d lms"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     volumes:
       - lms_postgres_data:/var/lib/postgresql/data
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend # الكونتكست داخل مجلد الباك اند مباشرة
+      dockerfile: Dockerfile
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
       - "8000:8000"
-
     environment:
-      SECRET_KEY: ${SECRET_KEY}
-      MAIL_USERNAME: ${MAIL_USERNAME}
-      MAIL_PASSWORD: ${MAIL_PASSWORD}
-      MAIL_FROM: ${MAIL_FROM}
-      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
-      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS}
-      GROQ_API_KEY: ${GROQ_API_KEY}
-      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS}
-      DATABASE_URL: ${DATABASE_URL}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_SERVER: ${POSTGRES_SERVER}
-      POSTGRES_PORT: ${POSTGRES_PORT}
-      POSTGRES_DB: ${POSTGRES_DB}
-
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@db:5432/lms
+      POSTGRES_SERVER: db
+      PYTHONPATH: /app/src # لكي يرى الكود الموديلات بشكل صحيح
     volumes:
-      - ./backend:/app
-      - ./tests:/app/tests
+      # نستخدم شرط بسيط: إذا كنا في CI لا نربط الفوليوم الذي يمسح الكود المبني
+      - ${BACKEND_VOLUME_PATH:-./backend}:/app
 
   frontend:
-    build: ./frontend
-    depends_on:
-      - backend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     ports:
-      - "80:80"
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
     volumes:
       - ./frontend:/app
+      - /app/node_modules # لمنع الكتابة فوق موديولات النود داخل الحاوية
 
 volumes:
   lms_postgres_data:
