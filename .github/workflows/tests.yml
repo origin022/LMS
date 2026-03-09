@@ -51,7 +51,7 @@ jobs:
           docker compose exec -T backend pytest tests/ -v
         env:
           # نمرر المسار البرمجي لكي يجد pytest الموديلات داخل src
-          PYTHONPATH: src
+          PYTHONPATH: /app
 
       - name: Check Logs on Failure
         if: failure()

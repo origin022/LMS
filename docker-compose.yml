@@ -28,7 +28,7 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@db:5432/lms
       POSTGRES_SERVER: db
-      PYTHONPATH: /app/src # لكي يرى الكود الموديلات بشكل صحيح
+      PYTHONPATH: /app # لكي يرى الكود الموديلات بشكل صحيح
     volumes:
       - ./backend:/app
 

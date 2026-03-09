@@ -24,5 +24,5 @@ COPY . .
 RUN uv sync --frozen
 
 # 6. تعريف المسار البرمجي
-ENV PYTHONPATH=/app/src
-CMD ["python", "-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+ENV PYTHONPATH=/app
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
