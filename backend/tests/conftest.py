@@ -9,7 +9,15 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from main import app
 from src.core.dep import get_session
 from src.core.config import config
-engine = create_async_engine("postgresql+asyncpg://postgres:12345@db:5432/lms")
+import os
+
+# استخدام رابط قاعدة البيانات من المتغيرات البيئية أو المتغير الافتراضي
+database_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:12345@localhost:5433/lms")
+# استبدال postgresql:// بـ postgresql+asyncpg:// إذا لزم الأمر في التست
+if database_url.startswith("postgresql://"):
+    database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+engine = create_async_engine(database_url)
 async_session_maker = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 @pytest.fixture(scope="session")
