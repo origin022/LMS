@@ -47,6 +47,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: dev # استهداف مرحلة التطوير لتفعيل التحديث التلقائي (HMR)
     ports:
       - "5173:5173"
     environment:
