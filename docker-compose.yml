@@ -7,8 +7,9 @@ services:
       POSTGRES_DB: lms
     ports:
       - "5433:5432"
-    healthcheck: # مهم جداً لضمان عدم تشغيل الباك اند قبل جهوزية القاعدة
-      test: ["CMD-SHELL", "pg_isready -U postgres -d lms"]
+    healthcheck:
+      # مهم جداً لضمان عدم تشغيل الباك اند قبل جهوزية القاعدة
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d lms" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -29,8 +30,7 @@ services:
       POSTGRES_SERVER: db
       PYTHONPATH: /app/src # لكي يرى الكود الموديلات بشكل صحيح
     volumes:
-      # نستخدم شرط بسيط: إذا كنا في CI لا نربط الفوليوم الذي يمسح الكود المبني
-      - ${BACKEND_VOLUME_PATH:-./backend}:/app
+      - ./backend:/app
 
   frontend:
     build:
