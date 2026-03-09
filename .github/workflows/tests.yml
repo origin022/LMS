@@ -45,7 +45,7 @@ jobs:
 
       - name: Run Backend Pytest
         run: |
-          # لاحظ حذف كلمة uv run لأن المكتبات مثبتة في النظام
+          # نستخدم pytest مباشرة لأنه الآن متاح في الـ PATH العام للحاوية
           docker compose exec -T backend pytest tests/ -v
         env:
           PYTHONPATH: src
