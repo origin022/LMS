@@ -14,5 +14,7 @@ else:
     print("lalتتيتيal")
     print("lalتتيتيal")
     print("lalتتيتيal")
+    print("lalتتيتيal")
+    print("lalتتيتيal")
 
     
