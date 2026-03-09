@@ -1,4 +1,4 @@
-name: Full Stack Dockerized Tests
+name: Backend Dockerized Tests
 
 on:
   push:
@@ -11,9 +11,10 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
+      # متغيرات ضرورية لكي لا ينهار الباك إند عند الإقلاع
       POSTGRES_PASSWORD: test_password
-      SECRET_KEY: test_secret_key_123
-      # السر هنا: في الـ CI نلغي ربط المجلد الخارجي ليعتمد الدوكر على الكود الذي تم عمل له COPY
+      SECRET_KEY: ${{ secrets.SECRET_KEY || 'test_secret_key_123' }}
+      DATABASE_URL: postgresql://postgres:test_password@db:5432/lms
       BACKEND_VOLUME_PATH: /tmp/ignore_me 
 
     steps:
@@ -25,21 +26,32 @@ jobs:
 
       - name: Build and Start Services
         run: |
+          # بناء وتشغيل الباك إند والقاعدة فقط
           docker compose up --build -d db backend
-        
-      - name: Wait for DB to be ready
+
+      - name: Wait for Services to be Ready
         run: |
-          # الانتظار حتى تستجيب قاعدة البيانات تماماً
+          # 1. التأكد من جاهزية قاعدة البيانات
+          echo "Waiting for Postgres..."
           docker compose exec -T db sh -c "until pg_isready -U postgres; do sleep 1; done"
+          
+          # 2. التأكد من أن الباك إند مستقر ولم ينهر (Crashed)
+          echo "Checking Backend status..."
+          if [ "$(docker inspect -f '{{.State.Running}}' $(docker compose ps -q backend))" != "true" ]; then
+            echo "❌ Backend container crashed! Showing logs:"
+            docker compose logs backend
+            exit 1
+          fi
 
       - name: Run Backend Pytest
         run: |
-          # تشغيل التست باستخدام uv داخل الحاوية
+          # تنفيذ التست داخل الحاوية
+          # ملاحظة: PYTHONPATH معرف مسبقاً في Dockerfile كـ /app/src
           docker compose exec -T backend uv run pytest tests/ -v
         env:
           PYTHONPATH: src
 
-      - name: Check Containers Logs on Failure
+      - name: Check Logs on Failure
         if: failure()
         run: |
           docker compose logs backend
