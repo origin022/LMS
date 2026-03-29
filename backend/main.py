@@ -13,8 +13,6 @@ from src.routers import donation as donation_router
 from src.models.Quiz_Attempt import Quiz_Attempt
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.core.config import config
-
 Quiz_Attempt.model_rebuild()
 
 
@@ -29,12 +27,8 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-       "http://localhost",          
-        "http://localhost:5173",     
-        "http://127.0.0.1",
         "http://127.0.0.1:5173",
-        "http://[::1]",             
-        "http://[::1]:5173",
+        "http://localhost:5173"
     ],
     allow_credentials=True,
     allow_origin_regex="http://localhost:.*",

@@ -1,5 +1,7 @@
 import json
 import os
+from sympy import limit
+import torch
 from groq import Groq
 import shutil
 from src.core.dep import engine
@@ -298,25 +300,59 @@ class TeacherService:
         db_lecture = await get_owned_obj(db, Lecture, lecture_id, current_user)
         return await TeacherService._update_entity(db, Lecture, lecture_id, data, "lecture_id")
 
-   
+    @staticmethod
+    async def update_quiz(db: AsyncSession, quiz_id: int, data: QuizUpdate, current_user: User):
+        db_quiz = await get_owned_obj(db, Quiz, quiz_id, current_user)
+        return await TeacherService._update_entity(db, Quiz, quiz_id, data, "quiz_id")
+
+    @staticmethod
+    async def update_question(db: AsyncSession, question_id: int, data: QuestionUpdate, current_user: User):
+        result = await db.exec(select(Question).where(Question.question_id == question_id))
+        db_question = result.first()
+
+        if not db_question:
+            raise HTTPException(status_code=404, detail="السؤال غير موجود")
+
+        await get_owned_obj(db, Quiz, db_question.quiz_id, current_user)
+
+        return await TeacherService._update_entity(db, Question, question_id, data, "question_id")
+    @staticmethod
+    async def update_option(db: AsyncSession, option_id: int, data: OptionUpdate, current_user: User):
+        stmt = (
+            select(Question_Option)
+            .join(Question_Option.question) 
+            .join(Question.quiz)          
+            .where(Question_Option.option_id == option_id)
+            .where(Quiz.user_id == current_user.user_id)
+        )
+    
+        result = await db.exec(stmt)
+        db_option = result.first()
+
+        if not db_option:
+            raise HTTPException(status_code=403, detail=" ليس لديك إذن لتعديل هذا الخيار أو الخيار غير موجود")
+
+        return await TeacherService._update_entity(db, Question_Option, option_id, data, "option_id")
+    
+
+
 
     @staticmethod
     async def process_video_transcription(lecture_id: int, file_path: str):
         try:
-            abs_path = os.path.abspath(file_path)
-            if not os.path.exists(abs_path):
-                return
-
-            def sync_transcribe():
-                with open(abs_path, "rb") as file:
-                    return groq_client.audio.transcriptions.create(
-                        file=(os.path.basename(abs_path), file.read()),
-                        model="whisper-large-v3",
-                        language="ar",
-                        response_format="verbose_json", 
-                    )
-
-            transcribed_data = await anyio.to_thread.run_sync(sync_transcribe)
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            print(f"⚙️ AI Engine is running on: {device.upper()}")
+        
+            abs_file_path = os.path.abspath(file_path)
+        
+            model = whisper.load_model("base").to(device)
+        
+            result = model.transcribe(
+                abs_file_path, 
+                language="ar", 
+                fp16=(device == "cuda") 
+            )
+            transcribed_text = result["text"]
 
             async with AsyncSession(engine) as db:
                 statement = select(Lecture).where(Lecture.lecture_id == lecture_id)
@@ -324,22 +360,12 @@ class TeacherService:
                 lecture = res.first()
             
                 if lecture:
-                    subtitles = []
-                    if hasattr(transcribed_data, 'segments'):
-                        for segment in transcribed_data.segments:
-                            subtitles.append({
-                                "start": segment['start'],
-                                "end": segment['end'],
-                                "text": segment['text']
-                            })
-                
-                    lecture.text = json.dumps(subtitles, ensure_ascii=False)
+                    lecture.text = transcribed_text
                     await db.commit()
-                    print(f"✅ تم تحديث الترجمة المتزامنة للمحاضرة {lecture_id}")
+                    print(f"✅ تم تحديث النص للمحاضرة {lecture_id} بنجاح")
 
         except Exception as e:
-            print(f"❌ خطأ معالجة الصوت: {str(e)}")
-
+            print(f" خطأ في عملية التحويل: {str(e)}")
 
 
     @staticmethod
