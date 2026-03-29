@@ -22,7 +22,5 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
         ...options,
         credentials: 'include',
         headers
-    };
-
-    return fetch(`${BASE_URL}${endpoint}`, defaultOptions);
+    });
 } 
