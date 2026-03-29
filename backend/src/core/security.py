@@ -59,18 +59,15 @@ def decode_token(token: str, expected_type: str) -> dict:
 
 
 async def get_owned_obj(db, model, obj_id, current_user, user_field="user_id"):
-    pk_name = model.__table__.primary_key.columns.keys()[0]
-    statement = select(model).where(getattr(model, pk_name) == obj_id)
-    result = await db.exec(statement)
-    obj = result.first()
+    statement = select(model).where(getattr(model, model.__table__.primary_key.columns.keys()[0]) == obj_id)
+
+    result = await db.execute(statement)
+    obj = result.scalars().first()
 
     if not obj:
-        raise HTTPException(status_code=404, detail=f"الـ {model.__name__} غير موجود")
+        raise HTTPException(status_code=404, detail=f"{model.__name__} not found")
 
     if getattr(obj, user_field) != current_user.user_id:
-        raise HTTPException(
-            status_code=403, 
-            detail="لا تملك صلاحية الوصول لهذا السجل (ليس ملكك)"
-        )
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     return obj

@@ -4,7 +4,11 @@ from typing import Optional
 class UpdateProfile(BaseModel):
     bio: Optional[str] = None
     name: Optional[str] = None 
-    picture: Optional[bytes] = None
+
+class ProfileUpdateResponse(BaseModel):
+    name: str
+    bio: str
+    has_picture: bool
 
 class ReadProfile(BaseModel):
     name: str 

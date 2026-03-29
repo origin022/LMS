@@ -101,9 +101,11 @@ class AdminService:
 
         stmt = (
         select(
+            User.user_id,
             User.name,
             User.email,
             User.phone,
+            User.roles_id,
             Roles.roles_name,
             State.name.label("state_name"),
             User.created_at
@@ -161,7 +163,7 @@ class AdminService:
     
     @staticmethod
     async def get_all_available_permissions(db: AsyncSession):
-        statement = select(Permission)
+        statement = select(Permission).join(Roles_Permission, Roles_Permission.permission_id == Permission.permission_id).where(Roles_Permission.role_id != 1, Roles_Permission.role_id != 3, Roles_Permission.role_id != 4)
         results = await db.exec(statement)
         return results.all()
     

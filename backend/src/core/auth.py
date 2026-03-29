@@ -12,6 +12,7 @@ from src.core.security import decode_token
 from src.core.dep import get_session
 from src.models.User import User
 from fastapi.security import OAuth2PasswordBearer
+from typing import Optional
 
 
 
@@ -90,3 +91,17 @@ class PermissionChecker:
             )
 
         return current_user
+
+
+
+
+
+
+async def get_current_user_optional(
+    request: Request,
+    db: AsyncSession = Depends(get_session)
+) -> Optional[User]:
+    try:
+        return await get_current_user(request, db) 
+    except Exception:
+        return None

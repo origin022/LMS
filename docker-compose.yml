@@ -1,15 +1,15 @@
 services:
   db:
-    image: postgres:16-alpine # تم التصحيح لنسخة مستقرة
+    image: postgres:16-alpine
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
       POSTGRES_DB: lms
     ports:
-      - "5433:5432"
+      - "5433:5432" # هنا 5433 للجهاز و 5432 للحاوية
     healthcheck:
-      # مهم جداً لضمان عدم تشغيل الباك اند قبل جهوزية القاعدة
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d lms" ]
+      # ملاحظة: داخل الحاوية نستخدم دائماً 5432 وليس 5433
+      test: ["CMD-SHELL", "pg_isready -U postgres -d lms"]
       interval: 5s
       timeout: 5s
       retries: 5

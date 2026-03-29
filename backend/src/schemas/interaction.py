@@ -23,6 +23,7 @@ class Commentred(BaseModel):
     comment_id: int
     text: str
     submission_time: datetime  
+    user_id: int
     user: CommentUserDetail   
     model_config = ConfigDict(from_attributes=True)
 

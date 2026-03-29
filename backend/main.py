@@ -9,8 +9,10 @@ from src.routers import manager as manager_router
 from src.routers import teacher as teacher_router
 from src.routers import interaction as interaction_router
 from src.routers import student as student_router
+from src.routers import donation as donation_router
 from src.models.Quiz_Attempt import Quiz_Attempt
 from fastapi.middleware.cors import CORSMiddleware
+
 from src.core.config import config
 
 Quiz_Attempt.model_rebuild()
@@ -27,11 +29,11 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-       "http://localhost",          # بدون بورت (كما يظهر في الـ Referer عندك)
-        "http://localhost:5173",     # بورت Vite الافتراضي
+       "http://localhost",          
+        "http://localhost:5173",     
         "http://127.0.0.1",
         "http://127.0.0.1:5173",
-        "http://[::1]",             # دعم IPv6 بدون بورت
+        "http://[::1]",             
         "http://[::1]:5173",
     ],
     allow_credentials=True,
@@ -92,5 +94,13 @@ app.include_router(
 app.include_router(
     student_router.router,
     prefix="/api/v1",
+)
+
+
+app.include_router(
+    donation_router.router,
+    prefix="/api/v1",
+    tags=["donation"]
+
 )
 

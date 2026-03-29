@@ -1,6 +1,5 @@
 import json
 import os
-from sympy import limit
 from groq import Groq
 import shutil
 from src.core.dep import engine
@@ -8,6 +7,7 @@ import uuid
 from sqlmodel import select
 from fastapi import HTTPException, UploadFile
 from sqlmodel.ext.asyncio.session import AsyncSession
+from src.models.Like import Like
 from src.models.Media import Media
 from src.core.security import get_owned_obj
 from src.models.User import User
@@ -18,8 +18,15 @@ from src.models.Question import Question
 from src.models.Question_Option import Question_Option
 from src.models.Course import Course
 from sqlalchemy.orm import joinedload, selectinload
-from src.schemas.teacher import CourseCreate, CourseUpdate, LectureCreate, LectureUpdate, OptionUpdate, QuestionUpdate, QuizGenerateRequest, QuizUpdate
+from src.schemas.teacher import (
+    CourseCreate, CourseUpdate, LectureCreate, LectureUpdate, 
+    LectureRead, MediaRead, QuizCreate,
+    QuizBulkUpdate
+)
+from sqlalchemy import func
 from src.core.config import config
+import anyio
+from typing import Optional
 
 groq_client = Groq(api_key=config.GROQ_API_KEY)
 
@@ -27,29 +34,30 @@ class TeacherService:
    
     @staticmethod
     async def create_course(db: AsyncSession, data: CourseCreate, user_id: int):
-        check_stmt = select(Teacher_Assignment).where(
-            Teacher_Assignment.user_id == user_id,
-            Teacher_Assignment.class_id == data.class_id
-        )
-        result = await db.exec(check_stmt)
+        statement = select(Teacher_Assignment).where(Teacher_Assignment.user_id == user_id)
+        result = await db.exec(statement)
         assignment = result.first()
 
         if not assignment:
             raise HTTPException(
                 status_code=403, 
-                detail="لا يمكنك إنشاء كورس في كلاس غير مسجل فيه"
+                detail="يجب أن تكون مرتبطاً بكلاس أولاً لإنشاء كورس"
             )
 
         new_course = Course(
             name=data.name,
-            class_id=data.class_id,
+            class_id=assignment.class_id,
             user_id=user_id
-        )   
-        db.add(new_course)
-        await db.commit()
-        await db.refresh(new_course)
-        return new_course
+        )
     
+        db.add(new_course)
+        try:
+            await db.commit()
+            await db.refresh(new_course)
+            return new_course
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(status_code=500, detail="فشل في حفظ البيانات")
     
 
 
@@ -71,19 +79,39 @@ class TeacherService:
 
 
     @staticmethod
-    async def create_lecture(db: AsyncSession, data: LectureCreate, user_id: int):
-        lecture = await get_owned_obj(db, Course, data.course_id, user_id)
+    async def create_lecture(db: AsyncSession, data: LectureCreate, current_user: User):
+
+        await get_owned_obj(db, Course, data.course_id, current_user)
+
         lecture = Lecture(
             title=data.title,
             description=data.description,
             course_id=data.course_id,
-            user_id=user_id
+            user_id=current_user.user_id
         )
+
         db.add(lecture)
         await db.commit()
         await db.refresh(lecture)
-        return lecture
 
+        stmt = (
+            select(Lecture)
+            .where(Lecture.lecture_id == lecture.lecture_id)
+            .options(selectinload(Lecture.media))
+        )
+
+        result = await db.exec(stmt)
+        return result.first()
+
+
+
+
+    @staticmethod
+    async def delete_quiz(db: AsyncSession, quiz_id: int, current_user: User):
+        quiz = await get_owned_obj(db, Quiz, quiz_id, current_user, user_field="user_id")
+        await db.delete(quiz)
+        await db.commit()
+        return {"message": "Quiz deleted successfully"}
 
     @staticmethod
     async def delete_lecture(db: AsyncSession, lecture_id: int, current_user: User):
@@ -120,52 +148,98 @@ class TeacherService:
 
     @staticmethod
     async def get_course(db: AsyncSession, class_id: int):
-        statement = select(Course).where(Course.class_id == class_id)
+        statement = select(Course).where(Course.class_id == class_id).options(selectinload(Course.user))
         result = await db.exec(statement)
         courses_list = result.all()
 
         if not courses_list:
             raise HTTPException(status_code=404, detail="No courses found for this class")
 
+        courses_data = []
+        for c in courses_list:
+            courses_data.append({
+                "course_id": c.course_id,
+                "name": c.name,
+                "teacher_id": c.user_id,
+                "teacher_name": c.user.name if c.user else "غير معروف"
+            })
+
         return {
             "class_id": class_id,
-            "course": courses_list
-              }
+            "course": courses_data
+        }
 
     @staticmethod
     async def get_lecture(db: AsyncSession, course_id: int):
-        stmt = (
+        stmt_course = select(Course).where(Course.course_id == course_id)
+        res_course = await db.exec(stmt_course)
+        course = res_course.first()
+    
+        if not course:
+            raise HTTPException(status_code=404, detail="Course not found")
+
+        stmt_lectures = (
             select(Lecture)
             .where(Lecture.course_id == course_id)
-            
+            .options(
+                selectinload(Lecture.course),
+                selectinload(Lecture.quiz).selectinload(Quiz.question).selectinload(Question.question_option)
+            )
         )
-        result = await db.exec(stmt)
-        lecture = result.all()
-        if not lecture:
-            raise HTTPException(404, "Lecture not found")
+        result = await db.exec(stmt_lectures)
+        lectures = result.all()
+    
         return {
-            "course_id": course_id,
-            "lecture": lecture
+            "course_id": course.course_id,
+            "course_name": course.name,
+            "lecture": lectures
         }
     
 
 
+
     @staticmethod
-    async def get_lecture_details(db: AsyncSession, lecture_id: int):
-        stmt = (
-            select(Lecture)
-            .where(Lecture.lecture_id == lecture_id)
-            .options(selectinload(Lecture.media)) 
-    )
+    async def get_lecture_details(db: AsyncSession, lecture_id: int, user_id: Optional[int] = None):
+        stmt = select(Lecture).where(Lecture.lecture_id == lecture_id).options(
+            selectinload(Lecture.media),
+            selectinload(Lecture.quiz).selectinload(Quiz.question).selectinload(Question.question_option)
+        )
         result = await db.exec(stmt)
         lecture = result.first()
+
         if not lecture:
             raise HTTPException(404, "Lecture not found")
-        return lecture
-    
 
-    
+        is_liked = False
+        if user_id:
+            like_stmt = select(Like).where(Like.lecture_id == lecture_id, Like.user_id == user_id)
+            like_res = await db.exec(like_stmt)
+            is_liked = like_res.first() is not None
 
+        likes_count_stmt = select(func.count()).where(Like.lecture_id == lecture_id)
+        likes_count_res = await db.exec(likes_count_stmt)
+        likes_count = likes_count_res.one()
+
+        quiz_id = None
+        if lecture.quiz and len(lecture.quiz) > 0:
+            quiz_id = lecture.quiz[0].quiz_id
+
+        return LectureRead(
+            lecture_id=lecture.lecture_id,
+            title=lecture.title,
+            description=lecture.description,
+            course_id=lecture.course_id,
+            created_at=lecture.created_at,
+            text=lecture.text,
+            likes_count=likes_count,
+            is_liked=is_liked,
+            quiz=lecture.quiz,
+            quiz_id=quiz_id,
+            media=[
+                MediaRead.model_validate(m)
+                for m in (lecture.media or [])
+            ]
+        )
 
     
     @staticmethod
@@ -224,72 +298,50 @@ class TeacherService:
         db_lecture = await get_owned_obj(db, Lecture, lecture_id, current_user)
         return await TeacherService._update_entity(db, Lecture, lecture_id, data, "lecture_id")
 
-    @staticmethod
-    async def update_quiz(db: AsyncSession, quiz_id: int, data: QuizUpdate, current_user: User):
-        db_quiz = await get_owned_obj(db, Quiz, quiz_id, current_user)
-        return await TeacherService._update_entity(db, Quiz, quiz_id, data, "quiz_id")
+   
 
     @staticmethod
-    async def update_question(db: AsyncSession, question_id: int, data: QuestionUpdate, current_user: User):
-        result = await db.exec(select(Question).where(Question.question_id == question_id))
-        db_question = result.first()
+    async def process_video_transcription(lecture_id: int, file_path: str):
+        try:
+            abs_path = os.path.abspath(file_path)
+            if not os.path.exists(abs_path):
+                return
 
-        if not db_question:
-            raise HTTPException(status_code=404, detail="السؤال غير موجود")
-
-        await get_owned_obj(db, Quiz, db_question.quiz_id, current_user)
-
-        return await TeacherService._update_entity(db, Question, question_id, data, "question_id")
-    @staticmethod
-    async def update_option(db: AsyncSession, option_id: int, data: OptionUpdate, current_user: User):
-        stmt = (
-            select(Question_Option)
-            .join(Question_Option.question) 
-            .join(Question.quiz)          
-            .where(Question_Option.option_id == option_id)
-            .where(Quiz.user_id == current_user.user_id)
-        )
-    
-        result = await db.exec(stmt)
-        db_option = result.first()
-
-        if not db_option:
-            raise HTTPException(status_code=403, detail=" ليس لديك إذن لتعديل هذا الخيار أو الخيار غير موجود")
-
-        return await TeacherService._update_entity(db, Question_Option, option_id, data, "option_id")
-    
-        @staticmethod
-        async def process_video_transcription(lecture_id: int, file_path: str):
-            try:
-                print(f"🚀 البدء بمعالجة الفيديو عبر Groq API: {file_path}")
-            
-            # فتح ملف الفيديو/الصوت لإرساله
-                with open(file_path, "rb") as file:
-                # إرسال الطلب لـ Groq (يدعم ملفات حتى 25MB)
-                    transcription = groq_client.audio.transcriptions.create(
-                        file=(os.path.basename(file_path), file.read()),
+            def sync_transcribe():
+                with open(abs_path, "rb") as file:
+                    return groq_client.audio.transcriptions.create(
+                        file=(os.path.basename(abs_path), file.read()),
                         model="whisper-large-v3",
                         language="ar",
-                        response_format="text",
+                        response_format="verbose_json", 
                     )
 
-                transcribed_text = transcription
+            transcribed_data = await anyio.to_thread.run_sync(sync_transcribe)
 
-            # تحديث قاعدة البيانات بالنص المستخرج
-                async with AsyncSession(engine) as db:
-                    statement = select(Lecture).where(Lecture.lecture_id == lecture_id)
-                    res = await db.exec(statement)
-                    lecture = res.first()
+            async with AsyncSession(engine) as db:
+                statement = select(Lecture).where(Lecture.lecture_id == lecture_id)
+                res = await db.exec(statement)
+                lecture = res.first()
+            
+                if lecture:
+                    subtitles = []
+                    if hasattr(transcribed_data, 'segments'):
+                        for segment in transcribed_data.segments:
+                            subtitles.append({
+                                "start": segment['start'],
+                                "end": segment['end'],
+                                "text": segment['text']
+                            })
                 
-                    if lecture:
-                        lecture.text = transcribed_text
-                        await db.commit()
-                        print(f"✅ تم تحديث نص المحاضرة {lecture_id} بنجاح")
+                    lecture.text = json.dumps(subtitles, ensure_ascii=False)
+                    await db.commit()
+                    print(f"✅ تم تحديث الترجمة المتزامنة للمحاضرة {lecture_id}")
 
-            except Exception as e:
-                print(f"❌ خطأ في معالجة Groq: {str(e)}")
+        except Exception as e:
+            print(f"❌ خطأ معالجة الصوت: {str(e)}")
 
-    
+
+
     @staticmethod
     async def upload_lecture_video(db: AsyncSession, lecture_id: int, file: UploadFile, current_user: User):
 
@@ -305,23 +357,27 @@ class TeacherService:
         if not file.content_type.startswith("video/"):
             raise HTTPException(status_code=400, detail="الملف المرفوع يجب أن يكون فيديو فقط")
 
-        upload_dir = "media/lectures"
+        upload_dir = "/app/media/lectures"
         os.makedirs(upload_dir, exist_ok=True) 
 
         file_ext = os.path.splitext(file.filename)[1]
         unique_name = f"{uuid.uuid4()}{file_ext}"
         full_path = os.path.join(upload_dir, unique_name)
-        file_path = full_path.replace("\\", "/")
+        file_path_relative = os.path.join("media", "lectures", unique_name).replace("\\", "/")
 
         try:
-            with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
+            def save_file():
+                with open(full_path, "wb") as buffer:
+                    shutil.copyfileobj(file.file, buffer)
+            await anyio.to_thread.run_sync(save_file)
+            print(f"✅ تم حفظ الملف في: {full_path}")
         except Exception as e:
+            print(f"❌ فشل حفظ الملف: {str(e)}")
             raise HTTPException(status_code=500, detail=f"فشل حفظ الملف: {str(e)}")
 
         new_media = Media(
             lecture_id=lecture_id,
-            file_path=file_path,
+            file_path=file_path_relative,
             file_name=file.filename, 
             mime_type=file.content_type
         )
@@ -336,13 +392,46 @@ class TeacherService:
 
 
     @staticmethod
-    async def generate_and_save_quiz(session: AsyncSession, data: QuizGenerateRequest):
+    async def generate_and_save_quiz(session: AsyncSession, data: QuizCreate, user_id: int):
         statement = select(Lecture).where(Lecture.lecture_id == data.lecture_id)
         result = await session.exec(statement)
         lecture = result.first()
 
         if not lecture or not lecture.text:
-            raise HTTPException(status_code=404, detail="المحاضرة غير موجودة")
+            raise HTTPException(status_code=404, detail="المحاضرة غير موجودة أو لم تتم معالجتها بعد")
+
+        # Check if lecture already has a quiz
+        await session.refresh(lecture, ["quiz"])
+        if lecture.quiz and len(lecture.quiz) > 0:
+            raise HTTPException(status_code=400, detail="هذه المحاضرة لديها كويز بالفعل")
+
+        # Create Quiz record if quiz_id is missing
+        target_quiz_id = data.quiz_id
+        if not target_quiz_id:
+            new_quiz = Quiz(
+                title=data.title or f"اختبار ذكاء اصطناعي: {lecture.title}",
+                lecture_id=lecture.lecture_id,
+                user_id=user_id
+            )
+            session.add(new_quiz)
+            await session.flush()
+            await session.refresh(new_quiz)
+            target_quiz_id = new_quiz.quiz_id
+
+        # Extract plain text from JSON subtitles if necessary
+        content_text = lecture.text
+        try:
+            parsed_data = json.loads(lecture.text)
+            if isinstance(parsed_data, list):
+                content_text = " ".join([item.get('text', '') for item in parsed_data if isinstance(item, dict)])
+            elif isinstance(parsed_data, dict) and "segments" in parsed_data:
+                content_text = " ".join([item.get('text', '') for item in parsed_data["segments"] if isinstance(item, dict)])
+        except (json.JSONDecodeError, TypeError):
+            # If not valid JSON, use original text as is
+            pass
+
+        if not content_text or len(content_text.strip()) < 10:
+             raise HTTPException(status_code=400, detail="محتوى المحاضرة غير كافٍ لتوليد كويز")
 
         try:
             completion = groq_client.chat.completions.create(
@@ -361,11 +450,11 @@ class TeacherService:
                     },
                     {
                         "role": "user",
-                        "content": f"Text: {lecture.text}"
+                        "content": f"Text: {content_text}"
                     }
                 ],
                 response_format={"type": "json_object"},
-                temperature=0.8
+                temperature=0.4
             )
 
             raw_data = json.loads(completion.choices[0].message.content)
@@ -378,7 +467,7 @@ class TeacherService:
 
                 new_q = Question(
                     question_text=q_text,
-                    quiz_id=data.quiz_id,
+                    quiz_id=target_quiz_id,
                     difficulty_level=int(q_item.get('difficulty', 1)),
                     concept_tags=q_item.get('tag', 'General')
                 )
@@ -409,16 +498,74 @@ class TeacherService:
 
 
 
-
-
-
     @staticmethod
-    async def get_all_recent_lectures(db: AsyncSession, limit: int):
+    async def get_all_recent_lectures(db: AsyncSession, limit_val: int): # غيرت الاسم لـ limit_val لتجنب تضارب المكتبات
         statement = (
             select(Lecture)
-            .options(joinedload(Lecture.course)) 
+            .options(
+                selectinload(Lecture.course),
+                selectinload(Lecture.quiz).selectinload(Quiz.question).selectinload(Question.question_option)
+            )
             .order_by(Lecture.lecture_id.desc())
-            .limit(limit)
+            .limit(limit_val)
         )
         result = await db.exec(statement)
         return result.all()
+
+    @staticmethod
+    async def bulk_update_quiz(db: AsyncSession, quiz_id: int, data: QuizBulkUpdate, current_user: User):
+        easy_count = sum(1 for q in data.questions if q.difficulty_level == 1)
+        medium_count = sum(1 for q in data.questions if q.difficulty_level == 2)
+        hard_count = sum(1 for q in data.questions if q.difficulty_level == 3)
+        total_count = len(data.questions)
+
+        if total_count != 15:
+            raise HTTPException(status_code=400, detail="يجب أن يكون العدد الكلي للأسئلة 15 سؤالاً")
+
+        if easy_count > 7 or medium_count > 7 or hard_count > 7:
+            raise HTTPException(status_code=400, detail="لا يمكن تجاوز 7 أسئلة في المستوى الواحد لضمان التوازن")
+        stmt = (
+            select(Quiz)
+            .where(Quiz.quiz_id == quiz_id, Quiz.user_id == current_user.user_id)
+            .options(selectinload(Quiz.question).selectinload(Question.question_option))
+        )
+        res = await db.exec(stmt)
+        quiz = res.first()
+
+        if not quiz:
+            raise HTTPException(status_code=404, detail="الكويز غير موجود")
+
+        quiz.title = data.title
+
+        current_questions = {q.question_id: q for q in quiz.question}
+        input_question_ids = {q.question_id for q in data.questions if q.question_id}
+
+        for q_id, q_obj in current_questions.items():
+            if q_id not in input_question_ids:
+                await db.delete(q_obj)
+
+        for q_data in data.questions:
+            if q_data.question_id in current_questions:
+                question = current_questions[q_data.question_id]
+                question.question_text = q_data.question_text
+                question.difficulty_level = q_data.difficulty_level
+            
+                current_options = {o.option_id: o for o in question.question_option}
+                input_option_ids = {o.option_id for o in q_data.options if o.option_id}
+
+                for o_id, o_obj in current_options.items():
+                    if o_id not in input_option_ids:
+                        await db.delete(o_obj)
+
+                for o_data in q_data.options:
+                    if o_data.option_id in current_options:
+                        option = current_options[o_data.option_id]
+                        option.option_text = o_data.option_text
+                        option.is_correct = o_data.is_correct
+
+        try:
+            await db.commit()
+            return {"status": "success", "message": "تم تحديث الكويز وكافة متعلقاته بنجاح"}
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(status_code=500, detail=f"خطأ في الحفظ: {str(e)}")

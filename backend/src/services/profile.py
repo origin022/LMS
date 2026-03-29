@@ -4,7 +4,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from fastapi import HTTPException
 from src.models.Profile import Profile
 from src.models.User import User
-from src.schemas.profile import UpdateProfile
+from src.schemas.profile import UpdateProfile, ProfileUpdateResponse
 
 
 class ProfileService:

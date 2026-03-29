@@ -2,7 +2,7 @@
   import { goto } from '$app/navigation';
   import { apiFetch } from '$lib/api';
 
-  let name = '', email = '', password = '', phone = '', roles_id = 1;
+  let name = '', email = '', password = '', phone = '', roles_id = '';
   let error = '', success = '', loading = false;
 
   async function handleRegister() {
@@ -57,8 +57,8 @@
         <div class="flex flex-col">
           <label for="roles" class="block text-xs text-gray-400 mr-1 mb-1">اختر نوع الحساب</label>
           <select id="roles" bind:value={roles_id} class="w-full p-2.5 border rounded-lg text-right bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all cursor-pointer">
-            <option value={1}>طالب</option>
-            <option value={2}>استاذ</option>
+            <option value={4}>طالب</option>
+            <option value={3}>استاذ</option>
           </select>
         </div>
       </div>

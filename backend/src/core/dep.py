@@ -18,6 +18,8 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
     except HTTPException:
         raise
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"Database error during session: {e}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

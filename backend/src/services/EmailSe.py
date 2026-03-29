@@ -1,11 +1,13 @@
 from redmail import gmail
 from src.core.config import config 
 from datetime import datetime, timezone
+from src.models.Profile import Profile
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from fastapi import HTTPException
 from src.models.User import User
 from src.models.VerificationTok import VerificationToken
+import asyncio 
 
 class EmailService:
     @staticmethod
@@ -16,22 +18,17 @@ class EmailService:
         gmail.port = config.MAIL_PORT
         gmail.set_template_paths(html="src/templates")
 
-
-
     @staticmethod
-    def send_universal_mail(to_email: str, token: str, subject: str, template: str, route: str):
-       
+    async def send_universal_mail(to_email: str, token: str, subject: str, template: str, route: str):
         EmailService._setup_gmail()
+        magic_link = f"http://localhost:8000/api/v1/{route}?token={token}"
         
-        magic_link = f"http://localhost:5173/{route}?token={token}"
         gmail.send(
             subject=subject,
-            receivers=[to_email],
-            html_template=template,
-            body_params={
-                "link": magic_link
-            }
-        )
+        receivers=[to_email],
+        html_template=template,
+        body_params={"link": magic_link}
+    )
     @staticmethod
     async def verify_user_email(token: str, db: AsyncSession):
         statement = select(VerificationToken).where(VerificationToken.token == token)
@@ -41,31 +38,38 @@ class EmailService:
         if not token_record:
             raise HTTPException(status_code=400, detail="الرابط غير صحيح")
 
+        token_expiry = token_record.expires_at
         current_time = datetime.now(timezone.utc)
 
-        if token_record.expires_at.astimezone(timezone.utc) < current_time:
+        if token_expiry.replace(tzinfo=timezone.utc) < current_time:
             await db.delete(token_record)
             await db.commit()
             raise HTTPException(status_code=400, detail="الرابط منتهي الصلاحية")
 
-        user_statement = select(User).where(User.email == token_record.email)
-        user_result = await db.exec(user_statement)
-        user = user_result.first()
+        user_stmt = select(User).where(User.email == token_record.email)
+        user_res = await db.exec(user_stmt)
+        user = user_res.first()
 
         if not user:
             raise HTTPException(status_code=404, detail="المستخدم غير موجود")
 
+        profile_stmt = select(Profile).where(Profile.user_id == user.user_id)
+        profile_res = await db.exec(profile_stmt)
+        profile = profile_res.first()
+
+        if not profile:
+            db.add(Profile(user_id=user.user_id))
+
         if user.roles_id == 4:
             user.state_id = 1
             msg = "تم تفعيل حسابك كطالب بنجاح!"
-        elif user.roles_id == 3:
-            user.state_id = 2
-            msg = "تم تأكيد إيميلك، بانتظار موافقة المدير."
         else:
             user.state_id = 2
             msg = "تم تأكيد الإيميل."
 
         await db.delete(token_record)
         await db.commit()
+    
+        await db.refresh(user)
 
         return {"message": msg, "state_id": user.state_id}

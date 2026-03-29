@@ -27,10 +27,12 @@ class InvitationResponse(BaseModel):
 
     
 class GetUsersResponse(BaseModel):
+    user_id: int
     name :str
     created_at:datetime
     email:str
     phone:str
+    roles_id: int
     roles_name:str
     state_name:str
 

@@ -14,7 +14,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
     
-    # تعريف المتغيرات التي يحتاجها الـ Compose والـ Dockerfile
     env:
       POSTGRES_PASSWORD: password
       SECRET_KEY: ${{ secrets.SECRET_KEY }}
@@ -29,28 +28,23 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build and Start Services
-        # بناء وتشغيل الباك أند والقاعدة كما هو معرف في docker-compose.yml
         run: docker compose up --build -d db backend
 
       - name: Wait for Services (Health Check)
         run: |
-          # الانتظار حتى تصبح قاعدة البيانات جاهزة تماماً
           echo "Waiting for DB..."
           docker compose exec -T db sh -c "until pg_isready -U postgres -d lms; do sleep 1; done"
           
-          # التأكد من أن الباك أند لم ينهار عند الإقلاع
           if [ "$(docker inspect -f '{{.State.Running}}' $(docker compose ps -q backend))" != "true" ]; then
-            echo "❌ Backend container crashed! Logs:"
+            echo " Backend container crashed! Logs:"
             docker compose logs backend
             exit 1
           fi
 
       - name: Run Pytest inside Container
-        # هنا ننفذ التست "داخل" الحاوية لضمان تطابق البيئة
         run: |
           docker compose exec -T backend pytest tests/ -v
         env:
-          # نمرر المسار البرمجي لكي يجد pytest الموديلات داخل src
           PYTHONPATH: /app
 
       - name: Check Logs on Failure

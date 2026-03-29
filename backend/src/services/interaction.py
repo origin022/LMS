@@ -1,13 +1,12 @@
 from http.client import HTTPException
 from sqlmodel import select, and_ , desc 
-from fastapi import status
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.core.security import get_owned_obj
 from src.schemas.interaction import CommentCreate, CommentUpdate  
 from src.models.Comment import Comment
 from src.models.Like import Like
 from src.models.User import User
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import selectinload
 
 class InteractionS:
     @staticmethod
@@ -20,11 +19,11 @@ class InteractionS:
         db.add(new_comment)
         await db.commit()
         await db.refresh(new_comment)
-    
-   
-        new_comment.user = current_user 
-    
-        return new_comment
+        stmt = select(Comment).where(Comment.comment_id == new_comment.comment_id).options(
+            selectinload(Comment.user).selectinload(User.profile)
+        )
+        res = await db.exec(stmt)
+        return res.first()
 
     @staticmethod
     async def get_lecture_comments(db: AsyncSession, lecture_id: int):
@@ -32,8 +31,8 @@ class InteractionS:
             select(Comment)
             .where(Comment.lecture_id == lecture_id)
             .options(
-                joinedload(Comment.user)        
-                .joinedload(User.profile)       
+                selectinload(Comment.user)        
+                .selectinload(User.profile)       
             )
             .order_by(desc(Comment.submission_time)) 
         )

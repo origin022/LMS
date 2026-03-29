@@ -3,15 +3,16 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlmodel import select 
 from src.schemas.admin import ClassroomRead
 from src.services.admin import AdminService
-from src.core.auth import PermissionChecker
+from src.core.auth import PermissionChecker, get_current_user , get_current_user_optional
 from src.schemas.teacher import CourseRead, CourseWithLectures, LectureRead, LectureSimple
 from src.services.teacher import TeacherService
-from src.models import Media
+from src.models import Media, User
 from src.core.dep import get_session
 from src.schemas.users import ReadeUserPublic
 from src.services.users import UserService
 from sqlmodel.ext.asyncio.session import AsyncSession
 import mimetypes
+from typing import Optional
 
 router = APIRouter(tags=["Public Users"])
 
@@ -34,7 +35,7 @@ async def get_user_full_profile(
 
     pic_url = None
     if user.profile and user.profile.profile_picture_data:
-        pic_url = f"{request.base_url}api/v1/users/picture/{user_id}"
+        pic_url = f"{request.base_url}api/v1/users/{user_id}/picture"
 
     return ReadeUserPublic(
         user_id=user.user_id,
@@ -92,12 +93,14 @@ async def get_recent_lectures(
     return await TeacherService.get_all_recent_lectures(db, limit)
 
 
-@router.get("/lectures/{lecture_id}",response_model=LectureRead)
+@router.get("/lectures/{lecture_id}", response_model=LectureRead)
 async def get_full_lecture_details(
     lecture_id: int, 
-    db: AsyncSession = Depends(get_session)
+    db: AsyncSession = Depends(get_session),
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
-    return await TeacherService.get_lecture_details(db, lecture_id)
+    uid = current_user.user_id if current_user else None
+    return await TeacherService.get_lecture_details(db, lecture_id,uid)
 
 
 

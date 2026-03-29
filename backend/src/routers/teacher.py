@@ -8,15 +8,13 @@ from src.schemas.teacher import (
     CourseCreate,
     LectureCreate,
     LectureRead,
-    QuizGenerateRequest,
     QuizRead,
     CourseUpdate,      
     LectureUpdate,     
-    QuizUpdate,
-    QuestionUpdate,
-    OptionUpdate,
-    AssignClassSchema
-    
+    AssignClassSchema,
+    LectureSimple,
+    QuizCreate,
+    QuizBulkUpdate
 )
 
 router = APIRouter(
@@ -40,6 +38,14 @@ async def create_course(
         user_id=current_user.user_id
     )
 
+
+
+@router.get("/teacher/courses", response_model=list[CourseBasic])
+async def get_teacher_courses(
+    db: AsyncSession = Depends(get_session),
+    current_user = Depends(PermissionChecker(["manage corse"]))
+):
+    return await TeacherService.get_teacher_courses(db, current_user.user_id)
 
 
 @router.delete("/teacher/courses/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -66,7 +72,7 @@ async def create_lecture(
     return await TeacherService.create_lecture(
         db=db,
         data=data,
-        user_id=current_user.user_id
+        current_user=current_user
     )
 
 
@@ -120,7 +126,7 @@ async def update_course(
         current_user=current_user
     )
 
-@router.patch("/lectures/{lecture_id}", response_model=LectureRead)
+@router.patch("/lectures/{lecture_id}", response_model=LectureUpdate)
 async def update_lecture(
     lecture_id: int,
     data: LectureUpdate,
@@ -134,47 +140,20 @@ async def update_lecture(
         current_user=current_user
     )
 
-@router.patch("/quizzes/{quiz_id}", response_model=QuizUpdate)
-async def update_quiz(
+
+@router.delete("/quizzes/{quiz_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_quiz(
     quiz_id: int,
-    data: QuizUpdate,
     db: AsyncSession = Depends(get_session),
     current_user = Depends(PermissionChecker(["Assign Quiz"]))
 ):
-    return await TeacherService.update_quiz(
+    return await TeacherService.delete_quiz(
         db=db,
         quiz_id=quiz_id,
-        data=data,
         current_user=current_user
     )
 
-@router.patch("/questions/{question_id}", response_model=QuestionUpdate)
-async def update_question(
-    question_id: int,
-    data: QuestionUpdate,
-    db: AsyncSession = Depends(get_session),
-    current_user = Depends(PermissionChecker(["Assign Quiz"]))
-):
-    return await TeacherService.update_question(
-        db=db,
-        question_id=question_id,
-        data=data,
-        current_user=current_user
-    )
 
-@router.patch("/options/{option_id}",                                                        response_model=OptionUpdate)
-async def update_option(
-    option_id: int,
-    data: OptionUpdate,
-    db: AsyncSession = Depends(get_session),
-    current_user = Depends(PermissionChecker(["Assign Quiz"]))
-):
-    return await TeacherService.update_option(
-        db=db,
-        option_id=option_id,
-        data=data,
-        current_user=current_user
-    )
 
 
 @router.post("/complete-teacher-setup")
@@ -208,9 +187,9 @@ async def upload_lecture_video(
         current_user=current_user
     )
     background_tasks.add_task(
-       TeacherService.process_video_transcription, 
-        lecture_id, 
-        media_record.file_path  
+    TeacherService.process_video_transcription,
+    lecture_id,
+    f"/app/{media_record.file_path}"
     )
 
     return {"message": "الفديو تم رفعه بنجاح."}
@@ -218,12 +197,13 @@ async def upload_lecture_video(
 
 @router.post("/generate-ai", status_code=status.HTTP_201_CREATED)
 async def generate_quiz_by_ai(
-    data: QuizGenerateRequest,
-    session: AsyncSession = Depends(get_session)
+    data: QuizCreate,
+    session: AsyncSession = Depends(get_session),
+    current_user = Depends(PermissionChecker(["Assign Quiz"]))
 ):
   
     try:
-        result = await TeacherService.generate_and_save_quiz(session, data)
+        result = await TeacherService.generate_and_save_quiz(session, data, current_user.user_id)
         return result
     
     except HTTPException as http_ex:
@@ -233,3 +213,17 @@ async def generate_quiz_by_ai(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"حدث خطأ أثناء توليد الكويز: {str(e)}"
         )
+
+@router.patch("/quizzes/{quiz_id}/bulk")
+async def bulk_update_quiz(
+    quiz_id: int,
+    data: QuizBulkUpdate,
+    db: AsyncSession = Depends(get_session),
+    current_user = Depends(PermissionChecker(["Assign Quiz"]))
+):
+    return await TeacherService.bulk_update_quiz(
+        db=db,
+        quiz_id=quiz_id,
+        data=data,
+        current_user=current_user
+    )

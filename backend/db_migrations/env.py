@@ -34,16 +34,14 @@ from src.models.User_Permission import User_Permission
 from src.models.Invitation import Invitation
 from src.models.VerificationTok import VerificationToken
 from src.models.Student_Mastery import Student_Mastery
+from src.models.Donation import Donation
 
-# الإعدادات الأساسية
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# الربط الصحيح للميتاداتا
 target_metadata = SQLModel.metadata
 
-# الرابط الثابت للدوكر
 DATABASE_URL = "postgresql+asyncpg://postgres:12345@db:5432/lms"
 config.set_main_option("sqlalchemy.url", DATABASE_URL)
 
@@ -83,7 +81,6 @@ def run_migrations_online():
         loop = None
 
     if loop and loop.is_running():
-        # في بيئة الدوكر يفضل استخدام run_sync أو التأكد من الـ loop
         asyncio.run(run_async_migrations())
     else:
         asyncio.run(run_async_migrations())

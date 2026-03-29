@@ -2,7 +2,9 @@
   import { onMount } from "svelte";
   import { apiFetch } from "$lib/api";
   import { fly, fade } from "svelte/transition";
-  import { Trash2, UserPlus, BookOpen, ShieldCheck, Users } from "lucide-svelte";
+  import { Trash2 } from "lucide-svelte";
+
+  let pendingRoles: Record<number, string> = {};
 
   interface UserAdmin {
     user_id: number;
@@ -11,6 +13,7 @@
     roles_id: number;
     state_id: number;
     roles_name?: string;
+    state_name?: string;
   }
 
   interface Role {
@@ -65,7 +68,6 @@
       
       else if (activeTab === "users") {
         const params = new URLSearchParams();
-        // التعديل هنا: التأكد من إرسال القيم كـ string للـ URLSearchParams بشكل صحيح
         if (filterRoleId) params.append("roles_id", filterRoleId.toString());
         if (filterStateId) params.append("state_id", filterStateId.toString());
 
@@ -94,7 +96,7 @@
   }
 
   $: filteredDisplay = users.filter((u) => {
-    const isManager = u.roles_id !== 1;
+    const isManager = u.roles_id !== 1 && u.roles_id !== 4 && u.roles_id !== 3;
     const matchesSubTab = userSubTab === "managers" ? isManager : !isManager;
     const matchesSearch =
       u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -278,8 +280,8 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
           
           <div class="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm h-fit">
-            <h3 class="text-xl font-black mb-8 text-slate-800 italic flex items-center gap-2">
-              <BookOpen size={20} /> إضافة كلاس جديد
+            <h3 class="text-xl font-black mb-8 text-slate-800">
+              إضافة كلاس جديد
             </h3>
             <input
               bind:value={newClassName}
@@ -335,16 +337,25 @@
 
                   <td class="px-8 py-6">
                     {#if userSubTab === "managers"}
-                      <select
-                        on:change={(e) => changeUserRole(user.user_id, e.currentTarget.value)}
-                        class="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-xl text-[10px] font-black border-none outline-none focus:ring-2 focus:ring-blue-100 cursor-pointer"
-                      >
-                        {#each roles as role}
-                          <option value={role.roles_id} selected={user.roles_id == role.roles_id}>
-                            {role.roles_name}
-                          </option>
-                        {/each}
-                      </select>
+                      <div class="flex items-center gap-2">
+                        <select
+                          value={pendingRoles[user.user_id] ?? String(user.roles_id)}
+                          on:change={(e) => { pendingRoles = { ...pendingRoles, [user.user_id]: e.currentTarget.value }; }}
+                          class="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-xl text-[10px] font-black border-none outline-none focus:ring-2 focus:ring-blue-100 cursor-pointer"
+                        >
+                          {#each roles as role}
+                            <option value={String(role.roles_id)}>{role.roles_name}</option>
+                          {/each}
+                        </select>
+                        {#if pendingRoles[user.user_id] && pendingRoles[user.user_id] !== String(user.roles_id)}
+                          <button
+                            on:click={() => changeUserRole(user.user_id, pendingRoles[user.user_id])}
+                            class="px-3 py-1.5 bg-blue-600 text-white rounded-xl text-[10px] font-black hover:bg-blue-700 transition-all"
+                          >
+                            حفظ
+                          </button>
+                        {/if}
+                      </div>
                     {:else}
                       <span class="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black">
                         {user.roles_name || "مستخدم"}
@@ -353,14 +364,11 @@
                   </td>
 
                   <td class="px-8 py-6">
-                    {#key user.state_id}
-                      <span 
-                        class="px-3 py-1 rounded-full text-[10px] font-black 
-                        {Number(user.state_id) === 1 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}"
-                      >
-                        {Number(user.state_id) === 1 ? "نشط" : "معطل"}
-                          </span>
-                    {/key}
+                    <span
+                      class="px-3 py-1 rounded-full text-[10px] font-black {user.state_name === 'Active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}"
+                    >
+                      {user.state_name === 'Active' ? 'نشط' : 'معطل'}
+                    </span>
                   </td>
                 </tr>
               {/each}
@@ -378,9 +386,6 @@
 
       {:else if activeTab === "invites"}
         <div class="max-w-xl mx-auto bg-white p-12 rounded-[3.5rem] border border-slate-100 shadow-sm text-center">
-          <div class="flex justify-center mb-6 text-blue-600">
-            <UserPlus size={40} />
-          </div>
           <h3 class="text-2xl font-black text-slate-800">دعوة مدير جديد</h3>
           <div class="space-y-4 mt-8">
             <input
@@ -408,9 +413,6 @@
 
       {:else if activeTab === "roles"}
         <div class="max-w-3xl mx-auto bg-white p-12 rounded-[3.5rem] border border-slate-100 shadow-sm">
-          <div class="flex justify-center mb-6 text-blue-600">
-            <ShieldCheck size={40} />
-          </div>
           <h3 class="text-2xl font-black text-slate-800 text-center">تخصيص رتبة جديدة</h3>
           <div class="space-y-8 mt-8">
             <input

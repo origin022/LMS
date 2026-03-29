@@ -8,7 +8,7 @@ class UserCreate(BaseModel):
     name : str = Field(max_length=100)
     email: EmailStr = Field(...)
     password: str = Field(..., min_length=8)
-    roles_id: int 
+    roles_id: int = Field(..., ge=3, le=4,)
     phone:str=  Field(
         ...,
         max_length=20, 

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Respons
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.core.auth import PermissionChecker, get_current_user
 from src.core.dep import get_session
-from src.schemas.profile import ReadProfile, UpdateProfile
+from src.schemas.profile import ReadProfile, UpdateProfile , ProfileUpdateResponse
 from src.services.profile import ProfileService
 from src.models.User import User
 
@@ -31,7 +31,7 @@ async def get_my_profile(
 @router.patch(
     "/profile",
     status_code=200,
-    response_model=UpdateProfile,
+    response_model=ProfileUpdateResponse,
     dependencies=[Depends(allow_profile)]
 )
 async def update_profile(
@@ -51,7 +51,7 @@ async def update_profile(
     if data.name:
         current_user.name = data.name
 
-    return UpdateProfile(
+    return ProfileUpdateResponse(
         name=current_user.name,
         bio=profile.bio,
         has_picture=True if profile.profile_picture_data else False
