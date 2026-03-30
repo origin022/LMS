@@ -136,10 +136,48 @@ class Manager:
 
         return {
             "name": target_user.name,
-            "role_name": "أستاذ" if target_user.roles_id == 3 else "طالب",
+            "role_name": target_user.roles.roles_name if target_user.roles else "",
             "permissions": final_permissions
-    }
+        }
 
+
+    @staticmethod
+    async def get_my_permissions(db: AsyncSession, current_user: User):
+        """جلب صلاحيات المدير المسجّل دخوله — بدون أي تحقق إضافي"""
+        statement = (
+            select(User)
+            .where(User.user_id == current_user.user_id)
+            .options(
+                selectinload(User.roles)
+                    .selectinload(Roles.roles_permission)
+                    .selectinload(Roles_Permission.permission),
+                selectinload(User.custom_permissions)
+                    .selectinload(User_Permission.permission)
+            )
+        )
+        result = await db.exec(statement)
+        target_user = result.first()
+
+        if not target_user:
+            raise HTTPException(status_code=404, detail="المستخدم غير موجود")
+
+        restricted_ids = {cp.permission_id for cp in target_user.custom_permissions}
+        final_permissions = []
+
+        for rp in target_user.roles.roles_permission:
+            p = rp.permission
+            status = "blocked" if p.permission_id in restricted_ids else "active"
+            final_permissions.append({
+                "permission_id": p.permission_id,
+                "name": p.name,
+                "status": status
+            })
+
+        return {
+            "name": target_user.name,
+            "role_name": target_user.roles.roles_name if target_user.roles else "",
+            "permissions": final_permissions
+        }
 
     @staticmethod
     async def delete_comment(db: AsyncSession, comment_id: int):

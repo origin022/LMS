@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 from typing import List
-from src.core.auth import PermissionChecker
+from src.core.auth import PermissionChecker, get_current_user
 from src.core.dep import get_session
+from src.models.User import User
 
 from src.services.manager import Manager
 from src.schemas.manager import BasicManagerResponse, CustomPermissionResponse, PermissionsDashboardResponse, ReadManagerAction, UpdateUserStatus, CreatLimitPermission
@@ -12,6 +13,13 @@ router = APIRouter(
     tags=["Manager Operations"]
 )
 
+
+@router.get("/my-dashboard", response_model=PermissionsDashboardResponse)
+async def get_my_dashboard(
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    return await Manager.get_my_permissions(db, current_user)
 
 
 @router.post("/update-status", response_model=ReadManagerAction)
