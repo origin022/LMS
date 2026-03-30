@@ -2,11 +2,11 @@ name: Backend Dockerized Tests
 
 on:
   push:
-    branches: [ dev ] # الفحص عند الرفع لفرع التطوير فقط
+    branches: [ main, dev ]
     paths:
       - 'backend/**'
   pull_request:
-    branches: [ main ] # الفحص عند محاولة دمج الكود في المين
+    branches: [ main ]
     paths:
       - 'backend/**'
 
@@ -14,66 +14,41 @@ jobs:
   test:
     runs-on: ubuntu-latest
     
-    # ميزة الإلغاء التلقائي: إذا رفعت كود جديد، يلغي الفحص القديم فوراً
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: true
-
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: lms
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     env:
-      # المتغيرات السرية
+      POSTGRES_PASSWORD: password
       SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@db:5432/lms
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
       MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
       MAIL_FROM: ${{ secrets.MAIL_FROM }}
-      
-      # إعدادات الداتابيس للتست
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_SERVER: localhost
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: lms
-      ACCESS_TOKEN_EXPIRE_MINUTES: 30
-      REFRESH_TOKEN_EXPIRE_DAYS: 7
-      DATABASE_URL: postgresql://postgres:password@localhost:5432/lms
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
+      - name: Build and Start Services
+        run: docker compose up --build -d db backend
 
-      - name: Set up Python
-        run: uv python install 3.13
+      - name: Wait for Services (Health Check)
+        run: |
+          echo "Waiting for DB..."
+          docker compose exec -T db sh -c "until pg_isready -U postgres -d lms; do sleep 1; done"
+          
+          if [ "$(docker inspect -f '{{.State.Running}}' $(docker compose ps -q backend))" != "true" ]; then
+            echo " Backend container crashed! Logs:"
+            docker compose logs backend
+            exit 1
+          fi
 
-      - name: Install dependencies
-        working-directory: ./backend 
-        # ملاحظة: uv sync هنا سيستخدم uv.lock الذي رفعت فيه torch
-        run: uv sync
-
-      - name: Create media directory
-        working-directory: ./backend
-        run: mkdir -p media
-
-      - name: Run Pytest
-        working-directory: ./backend    
+      - name: Run Pytest inside Container
+        run: |
+          docker compose exec -T backend pytest tests/ -v
         env:
-          SQLALCHEMY_DATABASE_URI: postgresql+asyncpg://postgres:password@localhost:5432/lms
-          PYTHONPATH: .
-        run: uv run pytest tests/ -v
+          PYTHONPATH: /app
+
+      - name: Check Logs on Failure
+        if: failure()
+        run: |
+          docker compose logs backend
+          docker compose logs db

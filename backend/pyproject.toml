@@ -23,7 +23,6 @@ dependencies = [
     "alembic>=1.18.4",
     "groq>=1.0.0",
     "httpx>=0.28.1",
-    "torch>=2.5.0",
 ]
 
 [tool.uv]

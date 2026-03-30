@@ -21,6 +21,7 @@ async def get_my_profile(
     role_name = current_user.roles.roles_name if current_user.roles else ""
 
     return {
+        "user_id": current_user.user_id,
         "name": current_user.name,
         "bio": profile.bio if profile else "",
         "picture": True if profile and profile.profile_picture_data else False,
