@@ -22,24 +22,13 @@
     } catch (e) {
       console.error("Logout failed:", e);
     } finally {
-      userStore.set({ name: "", profilePicture: "", role: "", loading: false });
+      userStore.set({ name: "", profilePicture: "", role: "", user_id: null, loading: false });
       if (typeof window !== "undefined") {
         localStorage.removeItem("user_session");
       }
       goto("/login");
     }
   }
-
-  $: console.log("USER:", user);
-  $: console.log("ROLE:", role);
-  $: console.log(
-    "isAdmin:",
-    isAdmin,
-    "isManager:",
-    isManager,
-    "isTeacher:",
-    isTeacher,
-  );
 </script>
 
 <aside
@@ -84,29 +73,35 @@
             crossorigin="use-credentials"
             class="w-24 h-24 rounded-[2rem] object-cover ring-4 {isAdmin
               ? 'ring-amber-400'
-              : isTeacher || isManager
-                ? 'ring-blue-400'
-                : isStudent
-                  ? 'ring-emerald-400'
-                  : 'ring-blue-100'} shadow"
+              : isManager
+                ? 'ring-purple-400'
+                : isTeacher
+                  ? 'ring-blue-400'
+                  : isStudent
+                    ? 'ring-emerald-400'
+                    : 'ring-blue-100'} shadow"
           />
         {:else}
           <div
             class="w-24 h-24 rounded-[2rem] flex items-center justify-center {isAdmin
               ? 'bg-amber-50'
-              : isStudent
-                ? 'bg-emerald-50'
-                : 'bg-blue-50'} ring-4 {isAdmin
-              ? 'ring-amber-400'
-              : isTeacher || isManager
-                ? 'ring-blue-400'
+              : isManager
+                ? 'bg-purple-50'
                 : isStudent
-                  ? 'ring-emerald-400'
-                  : 'ring-blue-100'}"
+                  ? 'bg-emerald-50'
+                  : 'bg-blue-50'} ring-4 {isAdmin
+              ? 'ring-amber-400'
+              : isManager
+                ? 'ring-purple-400'
+                : isTeacher
+                  ? 'ring-blue-400'
+                  : isStudent
+                    ? 'ring-emerald-400'
+                    : 'ring-blue-100'}"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              class="h-12 w-12 {isAdmin ? 'text-amber-500' : isStudent ? 'text-emerald-500' : 'text-blue-500'}"
+              class="h-12 w-12 {isAdmin ? 'text-amber-500' : isManager ? 'text-purple-500' : isStudent ? 'text-emerald-500' : 'text-blue-500'}"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -126,6 +121,12 @@
             class="absolute -top-2 -right-2 bg-amber-500 text-white px-2 py-1 text-[10px] font-black rounded-lg shadow-sm"
           >
             ADMIN
+          </div>
+        {:else if isManager}
+          <div
+            class="absolute -top-2 -right-2 bg-purple-600 text-white px-2 py-1 text-[10px] font-black rounded-lg shadow-sm"
+          >
+            مدير
           </div>
         {:else if isTeacher}
           <div
@@ -149,18 +150,20 @@
       <span
         class="text-xs mt-2 px-4 py-1 rounded-full border {isAdmin
           ? 'bg-amber-50 text-amber-600 border-amber-200'
-          : isTeacher || isManager
-            ? 'bg-blue-50 text-blue-600 border-blue-200'
-            : isStudent
-              ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
-              : 'bg-gray-50 text-gray-600 border-gray-200'}"
+          : isManager
+            ? 'bg-purple-50 text-purple-600 border-purple-200'
+            : isTeacher
+              ? 'bg-blue-50 text-blue-600 border-blue-200'
+              : isStudent
+                ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                : 'bg-gray-50 text-gray-600 border-gray-200'}"
       >
         {isAdmin
           ? "المدير العام"
-          : isTeacher
-            ? "أستاذ"
-            : isManager
-              ? "مدير نظام"
+          : isManager
+            ? "مدير نظام"
+            : isTeacher
+              ? "أستاذ"
               : isStudent
                 ? "طالب"
                 : "مستخدم"}
@@ -215,6 +218,15 @@
         class="w-full py-3 bg-amber-500 text-white rounded-xl font-black shadow-lg shadow-amber-100 active:scale-95 transition-transform"
       >
         لوحة التحكم
+      </button>
+    {/if}
+
+    {#if isManager}
+      <button
+        on:click={() => goto("/manager")}
+        class="w-full py-3 bg-purple-600 text-white rounded-xl font-black shadow-lg shadow-purple-100 active:scale-95 transition-transform"
+      >
+        لوحة المدير
       </button>
     {/if}
 

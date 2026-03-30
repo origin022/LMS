@@ -2,21 +2,26 @@ name: Backend Dockerized Tests
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [ dev ] # الفحص عند الرفع لفرع التطوير فقط
     paths:
       - 'backend/**'
   pull_request:
-    branches: [ main ]
+    branches: [ main ] # الفحص عند محاولة دمج الكود في المين
     paths:
       - 'backend/**'
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    
+    # ميزة الإلغاء التلقائي: إذا رفعت كود جديد، يلغي الفحص القديم فوراً
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
 
     services:
       postgres:
-        image: postgres:latest
+        image: postgres:16-alpine
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
@@ -30,23 +35,21 @@ jobs:
           --health-retries 5
 
     env:
+      # المتغيرات السرية
       SECRET_KEY: ${{ secrets.SECRET_KEY }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
       MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
       MAIL_FROM: ${{ secrets.MAIL_FROM }}
-
-
-
+      
+      # إعدادات الداتابيس للتست
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_SERVER: localhost
       POSTGRES_PORT: 5432
       POSTGRES_DB: lms
-
       ACCESS_TOKEN_EXPIRE_MINUTES: 30
       REFRESH_TOKEN_EXPIRE_DAYS: 7
-
       DATABASE_URL: postgresql://postgres:password@localhost:5432/lms
 
     steps:
@@ -60,7 +63,8 @@ jobs:
         run: uv python install 3.13
 
       - name: Install dependencies
-        working-directory: ./backend           
+        working-directory: ./backend 
+        # ملاحظة: uv sync هنا سيستخدم uv.lock الذي رفعت فيه torch
         run: uv sync
 
       - name: Create media directory

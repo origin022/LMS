@@ -40,6 +40,7 @@
         // الرابط الآن محلي (Object URL) ولا يحتاج لتوثيق عند العرض
         profilePicture: imageBlobUrl,
         role: data.role || "",
+        user_id: data.user_id ?? null,
         loading: false,
       };
 
@@ -61,6 +62,7 @@
       name: "",
       profilePicture: "",
       role: "",
+      user_id: null,
       loading: false,
     });
 
