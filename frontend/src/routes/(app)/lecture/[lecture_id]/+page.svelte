@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { page } from "$app/stores";
-  import { apiFetch, BASE_URL } from "$lib/api";
+  import { apiFetch, BASE_URL, FILE_URL } from "$lib/api";
   import { userStore } from "$lib/authStore";
   import QuizModal from "$lib/components/QuizModal.svelte";
   import {
@@ -18,6 +18,7 @@
     Languages,
     Captions,
     CaptionsOff,
+    Trash2,
   } from "lucide-svelte";
 
   interface SubtitleSegment {
@@ -41,6 +42,7 @@
   let lecture: Lecture | null = null;
   let comments: any[] = [];
   let newComment = "";
+  let commentError = "";
   let loading = true;
   let currentTime = 0;
   let duration = 0;
@@ -112,10 +114,47 @@
     }
   }
 
+  let enrolled = false;
+  let enrolling = false;
+
+async function handleAutoEnroll() {
+    if (enrolling || enrolled || !lecture?.course_id || !$userStore.name) return;
+
+    enrolling = true;
+    try {
+      const res = await apiFetch(`/enrollments/trigger/${lecture.course_id}`, {
+        method: "POST"
+      });
+
+      // إذا نجح (200) أو إذا كان مسجلاً بالفعل (400) أو ليس لديه صلاحية (403)
+      // في كل هذه الحالات يجب أن نتوقف عن المحاولة
+      if (res.ok || res.status === 400 || res.status === 403) {
+        enrolled = true; 
+        if (res.ok) console.log("Successfully enrolled");
+        else console.warn("Enrollment skip: Already enrolled or forbidden");
+      } else {
+        // إذا كان الخطأ 500 مثلاً، ربما تريد ترك الباب مفتوحاً للمحاولة لاحقاً
+        // لكن لمنع الـ Loop اللحظي، يفضل وضع enrolled = true هنا أيضاً
+        enrolled = true;
+      }
+    } catch (err) {
+      console.error("Auto-enrollment error:", err);
+      enrolled = true; // نغلق الحلقة حتى في حال خطأ الشبكة لضمان استقرار المتصفح
+    } finally {
+      enrolling = false;
+    }
+  }
+
+  // المراقب (Reactive Statement)
+  $: if (currentTime >= 5 && !enrolled && !enrolling) {
+    handleAutoEnroll();
+  }
+
   async function submitComment() {
     if (!newComment.trim()) return;
     const id = lecture?.lecture_id;
     if (!id) return;
+    commentError = "";
 
     const res = await apiFetch(`/interactions/lectures/${id}/comments`, {
       method: "POST",
@@ -136,6 +175,27 @@
 
       comments = [added, ...comments];
       newComment = "";
+    } else {
+      if (res.status === 403) {
+        commentError = "ليس لديك صلاحية لإرسال التعليقات";
+      } else {
+        const err = await res.json().catch(() => ({}));
+        commentError = err.detail || "فشل إرسال التعليق";
+      }
+    }
+  }
+
+  async function deleteComment(id: number) {
+    if (!confirm("هل أنت متأكد من حذف هذا التعليق؟")) return;
+    try {
+      const res = await apiFetch(`/manager/delete-comment/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        comments = comments.filter((c) => c.comment_id !== id);
+      }
+    } catch (err) {
+      console.error("Failed to delete comment", err);
     }
   }
   console.log(lecture);
@@ -171,7 +231,7 @@
               class="w-full h-full object-contain"
             >
               <source
-                src={`http://localhost:8000/${lecture.media[0].file_path}`}
+                src={`${FILE_URL}${lecture.media[0].file_path}`}
                 type={lecture.media[0].mime_type}
               />
             </video>
@@ -339,9 +399,15 @@
           <div
             class="flex justify-end items-center gap-4 pt-4 border-t border-slate-100"
           >
-            <p class="text-[10px] text-slate-500 font-bold uppercase">
-              تذكر أن تلتزم بقواعد المجتمع التعليمي
-            </p>
+            {#if commentError}
+              <p class="text-red-500 font-bold text-xs animate-pulse flex-1 text-right">
+                {commentError}
+              </p>
+            {:else}
+              <p class="text-[10px] text-slate-500 font-bold uppercase">
+                تذكر أن تلتزم بقواعد المجتمع التعليمي
+              </p>
+            {/if}
             <button
               on:click={submitComment}
               disabled={!newComment.trim() || !$userStore.name}
@@ -401,6 +467,16 @@
                     {comment.text}
                   </p>
                 </div>
+
+                {#if $userStore.role?.toString().toLowerCase() === "manager"}
+                  <button
+                    on:click={() => deleteComment(comment.comment_id)}
+                    class="text-slate-300 hover:text-red-500 p-2 hover:bg-red-50 rounded-xl transition-all self-start"
+                    title="حذف التعليق"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                {/if}
               </div>
             </div>
           {:else}

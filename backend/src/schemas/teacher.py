@@ -20,6 +20,8 @@ class QuestionRead(BaseModel):
     question_option: List["OptionRead"] = []
     model_config = ConfigDict(from_attributes=True)
 
+    
+
 class QuizRead(BaseModel):
     quiz_id: int
     title: str
@@ -33,6 +35,7 @@ class LectureSimple(BaseModel):
     title: str
     description: Optional[str]
     created_at: datetime
+    lecture_image: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -41,10 +44,9 @@ class CourseCreate(BaseModel):
     class_id: Optional[int] = None
 
 class LectureCreate(BaseModel):
-    lecture_id: int
-    title: Optional[str] = None
-    quiz_id: Optional[int] = None 
-    num_questions: Optional[int] = 15
+    title: str
+    description: Optional[str] = None
+    course_id: int
 
 class QuizCreate(BaseModel):
     title: str
@@ -73,6 +75,7 @@ class LectureRead(BaseModel):
     likes_count: int = 0
     is_liked: bool = False
     quiz_id: Optional[int] = None
+    lecture_image: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -95,6 +98,7 @@ class CourseBasic (BaseModel):
     name: str
     teacher_id: Optional[int] = None
     teacher_name: Optional[str] = None
+    course_thumbnail: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 class CourseRead(BaseModel):
@@ -105,6 +109,7 @@ class CourseRead(BaseModel):
 class ClassroomRead(BaseModel):
     class_id: int
     class_name: str
+    class_image: Optional[str] = None
     course :list[CourseBasic]
     model_config = ConfigDict(from_attributes=True)
 

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { sidebarOpen } from '$lib/authStore';
+  import DonationButton from './DonationButton.svelte';
 </script>
 
 <header class="h-16 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-8 sticky top-0 z-40">
@@ -20,11 +21,13 @@
     </div>
   </div>
 
-  <div class="flex items-center">
+  <div class="flex items-center gap-6">
+    <DonationButton />
+    <div class="h-8 w-px bg-gray-100 hidden sm:block"></div>
     <img 
       src="/llogo.png" 
       alt="Logo" 
-      class="h-20 w-auto object-contain" 
+      class="h-14 w-auto object-contain hover:scale-105 transition-transform" 
     />
   </div>
 </header>

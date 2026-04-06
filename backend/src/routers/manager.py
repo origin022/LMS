@@ -6,7 +6,7 @@ from src.core.dep import get_session
 from src.models.User import User
 
 from src.services.manager import Manager
-from src.schemas.manager import BasicManagerResponse, CustomPermissionResponse, PermissionsDashboardResponse, ReadManagerAction, UpdateUserStatus, CreatLimitPermission
+from src.schemas.manager import BasicManagerResponse, CustomPermissionResponse, PermissionsDashboardResponse, ReadManagerAction, UpdateUserStatus, CreatLimitPermission, CommentRead
 
 router = APIRouter(
     prefix="",
@@ -47,6 +47,14 @@ async def get_permissions_dashboard(
 ):
     return await Manager.get_user_permissions(db, user_id)
 
+@router.get("/permissions-dashboard/by-email/{email}", response_model=PermissionsDashboardResponse)
+async def get_permissions_dashboard_by_email(
+    email: str, 
+    db: AsyncSession = Depends(get_session),
+    current_user = Depends(PermissionChecker(["view users"]))
+):
+    return await Manager.get_user_permissions_by_email(db, email)
+
 @router.post("/toggle-permission", response_model=CustomPermissionResponse)
 async def toggle_permission(
     data: CreatLimitPermission, 
@@ -63,3 +71,11 @@ async def delete_comment(
     current_user = Depends(PermissionChecker(["Delete Comment"]))
 ):
     return await Manager.delete_comment(db, comment_id)
+
+@router.get("/recent-comments", response_model=List[CommentRead])
+async def get_recent_comments(
+    limit: int = 50,
+    db: AsyncSession = Depends(get_session),
+    current_user = Depends(PermissionChecker(["Delete Comment"]))
+):
+    return await Manager.get_recent_comments(db, limit)

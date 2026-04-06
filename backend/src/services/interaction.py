@@ -16,6 +16,10 @@ class InteractionS:
             lecture_id=comment_data.lecture_id,
             user_id=current_user.user_id
         )
+        if current_user.state_id != 1:
+            raise HTTPException(status_code=403, detail="حسابك غير نشط")
+
+      
         db.add(new_comment)
         await db.commit()
         await db.refresh(new_comment)

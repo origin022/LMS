@@ -71,6 +71,18 @@ class TeacherService:
     @staticmethod
     async def delete_course(db: AsyncSession, course_id: int, current_user: User):
         course = await get_owned_obj(db, Course, course_id, current_user, user_field="user_id")
+        
+        lectures_stmt = select(Lecture).where(Lecture.course_id == course_id)
+        lectures = (await db.exec(lectures_stmt)).all()
+        for lec in lectures:
+            if lec.lecture_image and os.path.exists(lec.lecture_image):
+                try: os.remove(lec.lecture_image)
+                except: pass
+                
+        if course.course_thumbnail and os.path.exists(course.course_thumbnail):
+            try: os.remove(course.course_thumbnail)
+            except: pass
+
         await db.delete(course)
         await db.commit()
         return {"message": "Course deleted successfully"}
@@ -116,6 +128,10 @@ class TeacherService:
     @staticmethod
     async def delete_lecture(db: AsyncSession, lecture_id: int, current_user: User):
         lecture = await get_owned_obj(db, Lecture, lecture_id, current_user)
+        
+        if lecture.lecture_image and os.path.exists(lecture.lecture_image):
+            try: os.remove(lecture.lecture_image)
+            except: pass
     
         await db.delete(lecture)
         await db.commit()
@@ -161,7 +177,8 @@ class TeacherService:
                 "course_id": c.course_id,
                 "name": c.name,
                 "teacher_id": c.user_id,
-                "teacher_name": c.user.name if c.user else "غير معروف"
+                "teacher_name": c.user.name if c.user else "غير معروف",
+                "course_thumbnail": c.course_thumbnail
             })
 
         return {
@@ -183,7 +200,7 @@ class TeacherService:
             .where(Lecture.course_id == course_id)
             .options(
                 selectinload(Lecture.course),
-                selectinload(Lecture.quiz).selectinload(Quiz.question).selectinload(Question.question_option)
+                selectinload(Lecture.quiz)
             )
         )
         result = await db.exec(stmt_lectures)
@@ -513,6 +530,25 @@ class TeacherService:
         return result.all()
 
     @staticmethod
+    async def get_lectures_quiz_map(db: AsyncSession, course_id: int):
+        stmt = (
+            select(Lecture)
+            .where(Lecture.course_id == course_id)
+            .options(selectinload(Lecture.quiz))
+        )
+
+        result = await db.exec(stmt)
+        lectures = result.all()
+
+        return [
+            {
+                "lecture_id": lec.lecture_id,
+                "quiz_id": lec.quiz[0].quiz_id if lec.quiz else None
+            }
+            for lec in lectures
+        ]
+
+    @staticmethod
     async def bulk_update_quiz(db: AsyncSession, quiz_id: int, data: QuizBulkUpdate, current_user: User):
         easy_count = sum(1 for q in data.questions if q.difficulty_level == 1)
         medium_count = sum(1 for q in data.questions if q.difficulty_level == 2)
@@ -569,3 +605,65 @@ class TeacherService:
         except Exception as e:
             await db.rollback()
             raise HTTPException(status_code=500, detail=f"خطأ في الحفظ: {str(e)}")
+
+    @staticmethod
+    async def upload_course_thumbnail(db: AsyncSession, course_id: int, file: UploadFile, current_user: User):
+        course = await get_owned_obj(db, Course, course_id, current_user, user_field="user_id")
+
+        if not file.content_type.startswith("image/"):
+            raise HTTPException(status_code=400, detail="الملف المرفوع يجب أن يكون صورة فقط")
+
+        upload_dir = "media/thum"
+        os.makedirs(upload_dir, exist_ok=True)
+
+        extension = file.filename.split(".")[-1]
+        file_name = f"crs_{course_id}_{uuid.uuid4().hex}.{extension}"
+        file_path = os.path.join(upload_dir, file_name)
+
+        try:
+            content = await file.read()
+            with open(file_path, "wb") as f:
+                f.write(content)
+            
+            if course.course_thumbnail and os.path.exists(course.course_thumbnail):
+                try: os.remove(course.course_thumbnail)
+                except: pass
+            
+            course.course_thumbnail = file_path.replace("\\", "/")
+            await db.commit()
+            await db.refresh(course)
+            return {"message": "تم رفع الصورة بنجاح", "image_url": file_path}
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @staticmethod
+    async def upload_lecture_image(db: AsyncSession, lecture_id: int, file: UploadFile, current_user: User):
+        lecture = await get_owned_obj(db, Lecture, lecture_id, current_user)
+
+        if not file.content_type.startswith("image/"):
+            raise HTTPException(status_code=400, detail="الملف المرفوع يجب أن يكون صورة فقط")
+
+        upload_dir = "media/thum"
+        os.makedirs(upload_dir, exist_ok=True)
+
+        extension = file.filename.split(".")[-1]
+        file_name = f"lec_{lecture_id}_{uuid.uuid4().hex}.{extension}"
+        file_path = os.path.join(upload_dir, file_name)
+
+        try:
+            content = await file.read()
+            with open(file_path, "wb") as f:
+                f.write(content)
+
+            if lecture.lecture_image and os.path.exists(lecture.lecture_image):
+                try: os.remove(lecture.lecture_image)
+                except: pass
+
+            lecture.lecture_image = file_path.replace("\\", "/")
+            await db.commit()
+            await db.refresh(lecture)
+            return {"message": "تم رفع الصورة بنجاح", "image_url": file_path}
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(status_code=500, detail=str(e))

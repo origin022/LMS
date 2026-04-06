@@ -1,11 +1,12 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { apiFetch } from "$lib/api";
+  import { apiFetch, FILE_URL } from "$lib/api";
 
   interface Classroom {
     class_id: number;
     class_name: string;
+    class_image?: string;
   }
 
   let classrooms: Classroom[] = [];
@@ -89,23 +90,28 @@
         {#each filteredClassrooms as classroom}
           <button
             on:click={() => goto(`/courses?class_id=${classroom.class_id}`)}
-            class="group bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all text-right relative overflow-hidden"
+            class="group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all text-right relative overflow-hidden flex flex-col border border-gray-100 p-0"
           >
-            <div
-              class="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6 text-2xl font-black group-hover:bg-blue-600 group-hover:text-white transition-all transform group-hover:rotate-6"
-            >
-              {classroom.class_name?.charAt(0)}
-            </div>
-            <h3 class="text-xl font-bold text-gray-800 mb-2">
-              {classroom.class_name}
-            </h3>
-            <div
-              class="mt-4 pt-4 border-t border-gray-50 text-blue-600 text-xs font-black flex items-center gap-2"
-            >
-              استكشف المحتوى
-              <span class="group-hover:translate-x-[-4px] transition-transform"
-                >←</span
+            {#if classroom.class_image}
+              <div class="h-44 w-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105" style="background-image: url('{FILE_URL}{classroom.class_image}')"></div>
+            {:else}
+              <div
+                class="h-44 w-full bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center transition-transform duration-500 group-hover:scale-105"
               >
+                <div class="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-3xl font-black shadow-md">
+                  {classroom.class_name?.charAt(0)}
+                </div>
+              </div>
+            {/if}
+            
+            <div class="p-4 flex flex-col items-start w-full bg-white z-10 relative">
+              <h3 class="text-lg font-bold text-gray-800 line-clamp-2 w-full leading-tight">
+                {classroom.class_name}
+              </h3>
+              <div class="mt-3 flex items-center justify-between w-full opacity-0 group-hover:opacity-100 transition-opacity">
+                <span class="text-xs font-black text-blue-500 bg-blue-50 px-2 py-1 rounded"> عرض المحتوى</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+              </div>
             </div>
           </button>
         {/each}

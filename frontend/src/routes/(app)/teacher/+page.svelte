@@ -36,6 +36,8 @@
   let lectureDescription = "";
   let selectedCourseId = "";
   let videoFile: File | null = null;
+  let lectureImageFile: File | null = null;
+  let courseImageFile: File | null = null;
   let publishing = false;
 
   let message = { text: "", type: "" };
@@ -85,9 +87,20 @@
         return showMsg(err.detail || "فشل إنشاء الكورس", "error");
       }
       const newCourse: Course = await res.json();
+
+      if (courseImageFile) {
+        const formData = new FormData();
+        formData.append("file", courseImageFile);
+        await apiFetch(`/teacher/courses/${newCourse.course_id}/thumbnail`, {
+          method: "PATCH",
+          body: formData,
+        });
+      }
+
       myCourses = [...myCourses, newCourse];
       showMsg("تم إنشاء الكورس بنجاح ✅");
       courseName = "";
+      courseImageFile = null;
       selectedClassId = "";
     } catch (e) {
       showMsg("حدث خطأ غير متوقع", "error");
@@ -121,6 +134,15 @@
 
       const lecture: Lecture = await res.json();
 
+      if (lectureImageFile) {
+        const formData = new FormData();
+        formData.append("file", lectureImageFile);
+        await apiFetch(`/teacher/lectures/${lecture.lecture_id}/thumbnail`, {
+          method: "PATCH",
+          body: formData,
+        });
+      }
+
       if (videoFile) {
         const formData = new FormData();
         formData.append("file", videoFile);
@@ -143,6 +165,7 @@
       lectureDescription = "";
       selectedCourseId = "";
       videoFile = null;
+      lectureImageFile = null;
     } catch (e) {
       showMsg("حدث خطأ غير متوقع", "error");
     } finally {
@@ -221,6 +244,36 @@
             />
           </div>
 
+          <div class="space-y-2">
+            <p class="text-xs font-black text-slate-500">الصورة المصغرة للكورس (اختياري)</p>
+            <label
+              for="inp-course-img"
+              class="flex flex-col items-center justify-center w-full h-24 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-all"
+            >
+              {#if courseImageFile}
+                <span class="text-sm font-black text-blue-600">{courseImageFile.name}</span>
+              {:else}
+                <span class="text-xl mb-1">🖼️</span>
+                <span class="text-xs font-black text-slate-400">اضغط لاختيار صورة</span>
+              {/if}
+              <input
+                id="inp-course-img"
+                type="file"
+                accept="image/*"
+                class="hidden"
+                on:change={(e) => { courseImageFile = e.currentTarget.files?.[0] ?? null; }}
+              />
+            </label>
+            {#if courseImageFile}
+              <button
+                on:click={() => (courseImageFile = null)}
+                class="text-[10px] font-black text-red-400 hover:underline"
+              >
+                إزالة الصورة
+              </button>
+            {/if}
+          </div>
+
           <button
             on:click={createCourse}
             disabled={creatingCourse}
@@ -287,6 +340,36 @@
               rows="3"
               class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none font-bold text-slate-700 resize-none focus:ring-2 focus:ring-blue-500/20"
             ></textarea>
+          </div>
+
+          <div class="space-y-2">
+            <p class="text-xs font-black text-slate-500">الصورة المصغرة للمحاضرة (اختياري)</p>
+            <label
+              for="inp-lec-img"
+              class="flex flex-col items-center justify-center w-full h-24 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-all"
+            >
+              {#if lectureImageFile}
+                <span class="text-sm font-black text-blue-600">{lectureImageFile.name}</span>
+              {:else}
+                <span class="text-xl mb-1">🖼️</span>
+                <span class="text-xs font-black text-slate-400">اضغط لاختيار صورة</span>
+              {/if}
+              <input
+                id="inp-lec-img"
+                type="file"
+                accept="image/*"
+                class="hidden"
+                on:change={(e) => { lectureImageFile = e.currentTarget.files?.[0] ?? null; }}
+              />
+            </label>
+            {#if lectureImageFile}
+              <button
+                on:click={() => (lectureImageFile = null)}
+                class="text-[10px] font-black text-red-400 hover:underline"
+              >
+                إزالة الصورة
+              </button>
+            {/if}
           </div>
 
           <div class="space-y-2">

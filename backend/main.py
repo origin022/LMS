@@ -83,7 +83,7 @@ app.include_router(
 )
 app.include_router(
     manager_router.router,
-    prefix="/api/v1", 
+    prefix="/api/v1/manager", 
     tags=["Manager Operations"] 
 )
 

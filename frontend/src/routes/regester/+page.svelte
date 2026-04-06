@@ -1,16 +1,40 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import { fly, fade } from 'svelte/transition';
   import { goto } from '$app/navigation';
   import { apiFetch } from '$lib/api';
 
   let name = '', email = '', password = '', phone = '', roles_id = '';
+  let classrooms: any[] = [];
+  let selectedClassId = '';
   let error = '', success = '', loading = false;
 
+  onMount(async () => {
+    try {
+      const res = await apiFetch('/classrooms');
+      if (res.ok) classrooms = await res.json();
+    } catch (e) {
+      console.error('Failed to fetch classrooms', e);
+    }
+  });
+
   async function handleRegister() {
+    if (roles_id == '3' && !selectedClassId) {
+      error = 'يرجى اختيار الكلاس أولاً';
+      return;
+    }
     error = ''; success = ''; loading = true;
     try {
       const response = await apiFetch('/register', {
         method: 'POST',
-        body: JSON.stringify({ name, email, password, phone, roles_id })
+        body: JSON.stringify({ 
+          name, 
+          email, 
+          password, 
+          phone, 
+          roles_id: parseInt(roles_id),
+          class_id: roles_id == '3' ? parseInt(selectedClassId) : null
+        })
       });
 
       const data = await response.json();
@@ -57,10 +81,23 @@
         <div class="flex flex-col">
           <label for="roles" class="block text-xs text-gray-400 mr-1 mb-1">اختر نوع الحساب</label>
           <select id="roles" bind:value={roles_id} class="w-full p-2.5 border rounded-lg text-right bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all cursor-pointer">
-            <option value={4}>طالب</option>
-            <option value={3}>استاذ</option>
+            <option value="">-- اختر --</option>
+            <option value="4">طالب</option>
+            <option value="3">استاذ</option>
           </select>
         </div>
+
+        {#if roles_id == '3'}
+          <div in:fly={{ y: -10, duration: 300 }} class="flex flex-col">
+            <label for="classroom" class="block text-xs text-blue-500 font-bold mr-1 mb-1 mt-1">اختر الكلاس الخاص بك</label>
+            <select id="classroom" bind:value={selectedClassId} class="w-full p-2.5 border border-blue-200 rounded-lg text-right bg-blue-50/50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all cursor-pointer font-bold">
+              <option value="">-- اختر الكلاس --</option>
+              {#each classrooms as cls}
+                <option value={cls.class_id}>{cls.class_name}</option>
+              {/each}
+            </select>
+          </div>
+        {/if}
       </div>
 
       <button 

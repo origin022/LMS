@@ -82,7 +82,7 @@
           <div class="flex-1 text-center md:text-right space-y-4">
             <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-black uppercase tracking-widest italic">
               <Shield size={14} />
-              طالب المنصة
+               متعلم
             </div>
             
             <h1 class="text-4xl md:text-5xl font-black text-slate-900 leading-tight italic drop-shadow-sm">

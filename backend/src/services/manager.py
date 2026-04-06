@@ -1,4 +1,4 @@
-from sqlmodel import select
+from sqlmodel import select, func
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -29,6 +29,7 @@ class Manager:
         
         return user
     
+
 
     @staticmethod
     async def update_user_status(db: AsyncSession, data: UpdateUserStatus):
@@ -87,19 +88,22 @@ class Manager:
             await db.delete(existing)
             await db.commit()
             return {"status": "success", "message": "تم إلغاء المنع بنجاح"}
+
+
+
     @staticmethod
-    async def get_user_permissions(db: AsyncSession, user_id: int):
+    async def get_user_permissions_by_email(db: AsyncSession, email: str):
         statement = (
             select(User)
-            .where(User.user_id == user_id)
+            .where(func.lower(User.email) == email.strip().lower())
             .options(
                 selectinload(User.roles)
                     .selectinload(Roles.roles_permission)
                     .selectinload(Roles_Permission.permission),
                 selectinload(User.custom_permissions)
                     .selectinload(User_Permission.permission)
+            )
         )
-    )
         result = await db.exec(statement)
         target_user = result.first()
 
@@ -107,22 +111,17 @@ class Manager:
             raise HTTPException(status_code=404, detail="المستخدم غير موجود")
 
         restricted_ids = {cp.permission_id for cp in target_user.custom_permissions}
-
         final_permissions = []
 
         for rp in target_user.roles.roles_permission:
             p = rp.permission
-            if p.permission_id in restricted_ids:
-                status = "محظور"
-            else:
-                status = "مسموح للنوع"
+            status = "blocked" if p.permission_id in restricted_ids else "active"
             
             final_permissions.append({
                 "permission_id": p.permission_id,
                 "name": p.name,
                 "status": status
-        }   
-        )
+            })
 
         role_perm_ids = {rp.permission_id for rp in target_user.roles.roles_permission}
         for cp in target_user.custom_permissions:
@@ -130,11 +129,11 @@ class Manager:
                 final_permissions.append({
                     "permission_id": cp.permission.permission_id,
                     "name": cp.permission.name,
-                    "status": "محظور (إضافي)"
-            }   
-            )
+                    "status": "blocked"
+                })
 
         return {
+            "user_id": target_user.user_id,
             "name": target_user.name,
             "role_name": target_user.roles.roles_name if target_user.roles else "",
             "permissions": final_permissions
@@ -143,7 +142,6 @@ class Manager:
 
     @staticmethod
     async def get_my_permissions(db: AsyncSession, current_user: User):
-        """جلب صلاحيات المدير المسجّل دخوله — بدون أي تحقق إضافي"""
         statement = (
             select(User)
             .where(User.user_id == current_user.user_id)
@@ -174,6 +172,7 @@ class Manager:
             })
 
         return {
+            "user_id": target_user.user_id,
             "name": target_user.name,
             "role_name": target_user.roles.roles_name if target_user.roles else "",
             "permissions": final_permissions
@@ -191,3 +190,25 @@ class Manager:
         await db.delete(comment)
         await db.commit()
         return {"message": "تم حذف التعليق بنجاح بواسطة الإدارة", "comment_id": comment_id}
+
+    @staticmethod
+    async def get_recent_comments(db: AsyncSession, limit: int = 50):
+        statement = (
+            select(Comment)
+            .options(selectinload(Comment.user), selectinload(Comment.lecture))
+            .order_by(Comment.submission_time.desc())
+            .limit(limit)
+        )
+        result = await db.exec(statement)
+        comments = result.all()
+
+        return [
+            {
+                "comment_id": c.comment_id,
+                "user_name": c.user.name,
+                "lecture_title": c.lecture.title,
+                "text": c.text,
+                "submission_time": c.submission_time
+            }
+            for c in comments
+        ]

@@ -3,6 +3,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from fastapi import APIRouter, Depends, HTTPException,  status  
 from src.core.auth import PermissionChecker
 from src.services.student import StudentService
+from src.services.teacher import TeacherService
 from src.schemas.student import  AnswerResponse, NextQuestionRequest, QuestionSubmission, RankResponse, ReadEnrollments
 
 router = APIRouter(
@@ -19,6 +20,11 @@ async def get_enrollments(
         db=db,
         student_id=current_user.user_id
     )
+
+
+@router.get("/courses/{course_id}/lectures/quiz-map")
+async def get_quiz_map(course_id: int, db: AsyncSession = Depends(get_session)):
+    return await TeacherService.get_lectures_quiz_map(db, course_id)
 
 
 @router.post("/enrollments/trigger/{course_id}", status_code=status.HTTP_200_OK)

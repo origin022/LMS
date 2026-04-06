@@ -93,7 +93,7 @@ class DonationService:
             }
         }
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=120.0) as client:
 
             response = await client.post(
                 f"{DonationService.BASE_URL}/api/v2/payment-gateway/transaction/init",

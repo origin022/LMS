@@ -1,12 +1,13 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { apiFetch, BASE_URL } from "$lib/api";
+  import { apiFetch, BASE_URL, FILE_URL } from "$lib/api";
   import { userStore } from "$lib/authStore";
   import { 
     User as UserIcon, Camera, Edit3, Save, X, 
     Mail, Shield, Award, Calendar, Loader2,
-    CheckCircle2
+    CheckCircle2, BookOpen, PlusCircle, ArrowRight
   } from "lucide-svelte";
+  import { goto } from "$app/navigation";
   import { fade, fly, scale } from "svelte/transition";
 
   interface UserProfile {
@@ -16,8 +17,17 @@
     role: string;
   }
 
+  interface Course {
+    course_id: number;
+    name: string;
+    course_thumbnail?: string;
+    teacher_name?: string;
+  }
+
   let profile: UserProfile | null = null;
+  let courses: Course[] = [];
   let loading = true;
+  let coursesLoading = false;
   let editing = false;
   let saving = false;
   let message = { text: "", type: "" };
@@ -36,12 +46,40 @@
         if (profile) {
           editName = profile.name;
           editBio = profile.bio;
+          loadCourses();
         }
       }
     } catch (err) {
       showMsg("فشل تحميل البيانات الشخصية", "error");
     } finally {
       loading = false;
+    }
+  }
+
+  async function loadCourses() {
+    if (!profile) return;
+    coursesLoading = true;
+    try {
+      const role = (profile.role || "").toLowerCase();
+      const isStudent = role.includes("student") || role.includes("طالب");
+      
+      const endpoint = isStudent ? "/enrollments" : "/teacher/courses";
+      const res = await apiFetch(endpoint);
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (isStudent) {
+          // data is list of enrollments
+          courses = data.map((e: any) => e.course).slice(0, 4);
+        } else {
+          // data is list of courses
+          courses = data.slice(0, 4);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading courses:", err);
+    } finally {
+      coursesLoading = false;
     }
   }
 
@@ -222,16 +260,7 @@
               />
             {/if}
 
-            <div class="flex flex-wrap justify-center md:justify-start gap-6 pt-2">
-              <div class="flex items-center gap-2 text-slate-500 font-bold text-sm">
-                <Award size={18} class="text-amber-500/50" />
-                <span>عضو متميز</span>
-              </div>
-              <div class="flex items-center gap-2 text-slate-500 font-bold text-sm">
-                <Calendar size={18} class="text-emerald-500/50" />
-                <span>منذ ٢٠٢٤</span>
-              </div>
-            </div>
+            
           </div>
 
           <div class="flex flex-col gap-3">
@@ -293,25 +322,76 @@
               {/if}
            </div>
 
-           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div class="p-6 rounded-[2rem] bg-slate-50 border border-slate-200 flex items-center gap-5 group hover:bg-slate-100 transition-all cursor-pointer">
-                <div class="p-4 bg-indigo-500/10 rounded-2xl text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-all">
-                  <Mail size={24} />
+           <div class="space-y-6 pt-4">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="p-2 bg-indigo-500/10 rounded-lg text-indigo-500">
+                    <BookOpen size={18} />
+                  </div>
+                  <h3 class="text-sm font-black text-slate-800 uppercase tracking-wider italic">
+                    {profile.role?.toLowerCase().includes("student") || profile.role?.includes("طالب") ? "آخر الكورسات المسجل بها" : "آخر الكورسات المضافة"}
+                  </h3>
                 </div>
-                <div class="space-y-1">
-                  <p class="text-[10px] font-black text-slate-500 uppercase">البريد الإلكتروني</p>
-                  <p class="text-sm font-bold text-slate-800 opacity-80">تم التحقق</p>
-                </div>
+                
+                {#if courses.length > 0}
+                  <button 
+                    on:click={() => profile && goto(profile.role?.toLowerCase().includes("student") || profile.role?.includes("طالب") ? "/my-lectures" : "/teacher")}
+                    class="text-[10px] font-black text-indigo-500 hover:text-indigo-600 transition-colors flex items-center gap-1 group/all"
+                  >
+                    عرض الكل
+                    <ArrowRight size={12} class="group-hover/all:translate-x-[-2px] transition-transform" />
+                  </button>
+                {/if}
               </div>
-              <div class="p-6 rounded-[2rem] bg-slate-50 border border-slate-200 flex items-center gap-5 group hover:bg-slate-100 transition-all cursor-pointer">
-                <div class="p-4 bg-purple-500/10 rounded-2xl text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition-all">
-                  <Shield size={24} />
+
+              {#if coursesLoading}
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  {#each Array(4) as _}
+                    <div class="h-64 bg-slate-50 border border-slate-100 rounded-[2rem] animate-pulse"></div>
+                  {/each}
                 </div>
-                <div class="space-y-1">
-                  <p class="text-[10px] font-black text-slate-500 uppercase">حالة الحساب</p>
-                  <p class="text-sm font-bold text-slate-800 opacity-80">حساب موثق</p>
+              {:else if courses.length > 0}
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  {#each courses as course}
+                    <button 
+                      on:click={() => goto(`/courses?course_id=${course.course_id}`)}
+                      class="flex flex-col group bg-white border border-slate-100 rounded-[2rem] overflow-hidden transition-all hover:shadow-xl hover:shadow-indigo-500/5 hover:-translate-y-1 hover:border-indigo-100"
+                    >
+                      <div class="h-32 w-full overflow-hidden bg-slate-50 border-b border-slate-100 relative">
+                        {#if course.course_thumbnail}
+                          <img 
+                            src={FILE_URL + course.course_thumbnail} 
+                            alt={course.name} 
+                            class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                          />
+                        {:else}
+                          <div class="w-full h-full flex items-center justify-center bg-indigo-50 text-indigo-500 font-black text-2xl italic">
+                            {course.name.charAt(0)}
+                          </div>
+                        {/if}
+                        <div class="absolute bottom-2 left-2 p-2 bg-white/80 backdrop-blur-sm rounded-xl text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <ArrowRight size={14} />
+                        </div>
+                      </div>
+                      
+                      <div class="p-4 flex-1 flex flex-col justify-between text-right">
+                        <h4 class="text-xs font-black text-slate-800 line-clamp-2 leading-snug group-hover:text-indigo-600 transition-colors">
+                          {course.name}
+                        </h4>
+                      </div>
+                    </button>
+                  {/each}
                 </div>
-              </div>
+              {:else}
+                <div class="p-8 rounded-[2rem] bg-slate-50 border-2 border-dashed border-slate-200 text-center space-y-3">
+                  <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto shadow-sm">
+                    <PlusCircle size={24} class="text-slate-300" />
+                  </div>
+                  <p class="text-xs font-bold text-slate-400 italic">
+                    {profile.role?.toLowerCase().includes("student") || profile.role?.includes("طالب") ? "لم تشارك في أي كورس بعد" : "لم تقم بإنشاء أي كورسات بعد"}
+                  </p>
+                </div>
+              {/if}
            </div>
         </section>
       </div>

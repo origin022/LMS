@@ -1,9 +1,10 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, status
+from fastapi import APIRouter, BackgroundTasks, Depends, status , File, UploadFile
 from sqlmodel.ext.asyncio.session import AsyncSession
 from typing import List, Optional
 from src.services.EmailSe import EmailService
 from src.core.dep import get_session
 from src.core.auth import PermissionChecker
+
 from src.schemas.admin import (
     ClassroomCreate, 
     ClassroomRead,
@@ -26,13 +27,29 @@ CHANGE_PERMISSION = PermissionChecker(["Change Permission"])
 DELETE_MANAGER = PermissionChecker(["Delete Manager"])
 
 
+from fastapi import Form
 @router.post("/admin/classrooms", response_model=ClassroomRead, status_code=status.HTTP_201_CREATED)
 async def create_new_classroom(
-    data: ClassroomCreate,
+    name: str = Form(..., min_length=3, max_length=20),
+    image: UploadFile = File(None),
     db: AsyncSession = Depends(get_session),
     current_user = Depends(check_add_class)
 ):
-    return await AdminService.create_classroom(db, data)
+    classroom_data = ClassroomCreate(name=name)
+    new_class = await AdminService.create_classroom(db, classroom_data)
+    
+    if image and image.filename:
+        # التحقق من نوع الملف (MIME Type)
+        if not image.content_type.startswith("image/"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, 
+                detail="يجب رفع ملف بصيغة صورة فقط (png, jpg, jpeg)"
+            )
+        await AdminService.upload_classroom_image(db, new_class.class_id, image)
+        await db.refresh(new_class)
+        
+    return new_class
+    
 
 @router.delete("/admin/classrooms/{classroom_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_classroom(
@@ -106,7 +123,8 @@ async def deactivate_manager(
     db: AsyncSession = Depends(get_session),
     current_user = Depends(DELETE_MANAGER)
 ):
-    return await AdminService.deactivate_manager(db, manager_id)
+    await AdminService.deactivate_manager(db, manager_id)
+    return {"message": "تم إلغاء تفعيل المدير"}
 
 
 
@@ -117,3 +135,20 @@ async def get_roles_for_invite(
 ):
     return await AdminService.get_invitable_roles(db)
 
+
+@router.patch("/admin/classrooms/{classroom_id}/image", status_code=status.HTTP_200_OK)
+async def update_classroom_thumbnail(
+    classroom_id: int,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_session),
+    # current_user = Depends(check_add_class) # فَعّلها إذا كنت تستخدم الحماية
+):
+    # 1. التحقق من نوع الملف (MIME Type)
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="يجب رفع ملف بصيغة صورة فقط (png, jpg, jpeg)"
+        )
+
+    # 2. إرسال الملف للسيرفس لمعالجته وحفظه في media/thum
+    return await AdminService.upload_classroom_image(db, classroom_id, file)

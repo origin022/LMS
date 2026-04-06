@@ -31,11 +31,12 @@ class Lecture(SQLModel , table = True) :
     media : list["Media"]=Relationship(back_populates="lecture",cascade_delete=True)
     like : list["Like"] = Relationship(back_populates="lecture",cascade_delete=True)
     comment : list["Comment"]  =Relationship(back_populates="lecture",cascade_delete=True)
+    lecture_image:  str | None = Field(default=None)    
 
 
     course : "Course" = Relationship(back_populates="lecture")
     user : "User" = Relationship(back_populates="lecture" )
-    quiz : list["Quiz"] = Relationship(back_populates="lecture")
+    quiz : list["Quiz"] = Relationship(back_populates="lecture", cascade_delete=True)
 
     
 

@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Dict, List, Optional, Any
+from datetime import datetime
 
 from enum import Enum
 
@@ -50,8 +51,18 @@ class UserPermissionInfo(BaseModel):
     status: str  
 
 class PermissionsDashboardResponse(BaseModel):
+    user_id: int
     name: str
     role_name: str
     permissions: List[UserPermissionInfo] 
+    
+    model_config = ConfigDict(from_attributes=True)
+
+class CommentRead(BaseModel):
+    comment_id: int
+    user_name: str
+    lecture_title: str
+    text: str
+    submission_time: datetime
     
     model_config = ConfigDict(from_attributes=True)

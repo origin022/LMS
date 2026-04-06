@@ -6,6 +6,7 @@ from fastapi import HTTPException, status
 from src.models.VerificationTok import TokenType, VerificationToken
 from src.services.EmailSe import EmailService
 from src.models.User import User
+from src.models import Teacher_Assignment
 from src.schemas.user import UserCreate, UserInvitationRegister
 from src.core.security import hash_password
 from src.models.Invitation import Invitation
@@ -49,6 +50,15 @@ async def create_new_user(
     db.add(verification_entry)
 
     await db.commit()
+    await db.refresh(new_user)
+
+    if user_data.roles_id == 3 and user_data.class_id:
+        assignment = Teacher_Assignment(
+            user_id=new_user.user_id,
+            class_id=user_data.class_id
+        )
+        db.add(assignment)
+        await db.commit()
 
     await db.refresh(new_user)
     

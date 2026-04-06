@@ -14,8 +14,10 @@ class Course(SQLModel , table = True):
     user_id:int = Field(foreign_key= "user.user_id" , nullable=False)
     name :str = Field(max_length=20 , nullable=False)
     class_id :int  = Field(foreign_key='classroom.class_id', index=True , nullable=False)
+    course_thumbnail:  str | None = Field(default=None)    
 
-    lecture : list["Lecture"] = Relationship(back_populates="course")
+
+    lecture : list["Lecture"] = Relationship(back_populates="course", cascade_delete=True)
     enrollment : list["Enrollment"] = Relationship(back_populates="course",
             sa_relationship_kwargs={
             "cascade": "all, delete-orphan",

@@ -1,4 +1,6 @@
 export const BASE_URL = 'http://localhost:8000/api/v1';
+export const FILE_URL = 'http://localhost:8000/';
+
 
 export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
     const token = localStorage.getItem("token");

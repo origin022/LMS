@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
-  import { apiFetch } from "$lib/api";
+  import { apiFetch, FILE_URL } from "$lib/api";
   import { fly } from "svelte/transition";
   import { userStore } from "$lib/authStore";
 
@@ -11,14 +11,17 @@
     name: string;
     teacher_id?: number;
     teacher_name?: string;
+    course_thumbnail?: string;
   }
 
   interface Lecture {
+    [x: string]: any;
     lecture_id: number;
     title: string;
     description?: string;
     created_at: string;
     text?: string | null;
+    lecture_image?: string;
     quiz?: any[];
   }
 
@@ -127,15 +130,32 @@
           courses = data.course || [];
         }
       } else if (lectureMode && courseId) {
-        const res = await apiFetch(`/users/courses/${courseId}/lectures`);
-        if (res.ok) {
-          const data = await res.json();
-          courseName = data.course_name || "";
-          pageTitle = courseName ? `كورس: ${courseName}` : "محتوى الكورس";
-          pageSubtitle = "قائمة المحاضرات المتاحة في هذا الكورس";
-          lectures = data.lecture || [];
-        }
-      }
+  const res = await apiFetch(`/users/courses/${courseId}/lectures`);
+  if (res.ok) {
+    const data = await res.json();
+
+    courseName = data.course_name || "";
+    pageTitle = courseName ? `كورس: ${courseName}` : "محتوى الكورس";
+    pageSubtitle = "قائمة المحاضرات المتاحة في هذا الكورس";
+
+    lectures = data.lecture || [];
+
+    // ربط quiz_id
+    const quizRes = await apiFetch(`/courses/${courseId}/lectures/quiz-map`);
+    if (quizRes.ok) {
+      const quizMap = await quizRes.json();
+
+      const map = new Map(
+        quizMap.map((q: any) => [q.lecture_id, q.quiz_id])
+      );
+
+      lectures = lectures.map((lec) => ({
+        ...lec,
+        quiz_id: map.get(lec.lecture_id) || null
+      }));
+    }
+  }
+}console.log(lectures);
     } catch (err) {
       console.error(err);
     } finally {
@@ -279,11 +299,17 @@
       deletingLectureId = null;
     }
   }
-
-  function openQuizModal(lecture: Lecture, e: MouseEvent) {
+function openQuizModal(lecture: Lecture, e: MouseEvent) {
     e.stopPropagation();
-    if (lecture.quiz && lecture.quiz.length > 0) return;
     
+    // إذا كان هناك كويز فعلاً، نفتح واجهة التعديل مباشرة
+if (lecture.quiz_id){
+        const quizId = lecture.quiz_id; // نفترض أن الكويز الأول هو المطلوب
+      manageQuiz(quizId, e);
+      return;
+    }
+    
+    // إذا لم يوجد كويز، نفتح واجهة الإنشاء (الوضع الحالي لديك)
     selectedLectureForQuiz = lecture;
     newQuizTitle = "";
     showQuizModal = true;
@@ -844,25 +870,34 @@
                 goto(
                   `/courses?course_id=${course.course_id}${mineMode ? "&mine=true" : ""}`,
                 )}
-              class="group bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all text-right relative overflow-hidden cursor-pointer"
+              class="group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all text-right relative overflow-hidden cursor-pointer flex flex-col border border-gray-100 p-0"
             >
-              <div
-                class="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6 text-2xl font-black group-hover:bg-blue-600 group-hover:text-white transition-all transform group-hover:rotate-6"
-              >
-                {course.name?.charAt(0)}
-              </div>
-              <h3 class="text-xl font-bold text-gray-800 mb-2">
-                {course.name}
-              </h3>
-              {#if course.teacher_name && !mineMode}
-                <p class="text-xs text-gray-400 font-medium mb-1">
-                  👤 {course.teacher_name}
-                </p>
+              {#if course.course_thumbnail}
+                <div class="h-44 w-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105" style="background-image: url('{FILE_URL}{course.course_thumbnail}')"></div>
+              {:else}
+                <div
+                  class="h-44 w-full bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center transition-transform duration-500 group-hover:scale-105"
+                >
+                  <div class="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-3xl font-black shadow-md">
+                    {course.name?.charAt(0)}
+                  </div>
+                </div>
               {/if}
+              
+              <div class="p-4 flex flex-col items-start w-full bg-white z-10 relative">
+                <h3 class="text-lg font-bold text-gray-800 line-clamp-2 leading-tight mb-2 w-full">
+                  {course.name}
+                </h3>
+                {#if course.teacher_name && !mineMode}
+                  <p class="text-[11px] text-slate-500 font-bold mb-2 flex items-center gap-1.5 opacity-90">
+                    <span class="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px]">👨‍🏫</span>
+                    {course.teacher_name}
+                  </p>
+                {/if}
 
               {#if mineMode}
                 <div
-                  class="mt-4 pt-4 border-t border-gray-50 flex gap-2"
+                  class="mt-4 pt-4 border-t border-gray-50 flex gap-2 w-full"
                   on:click|stopPropagation
                   on:keydown|stopPropagation={() => {}}
                   role="button"
@@ -884,7 +919,7 @@
                 </div>
               {:else}
                 <div
-                  class="mt-4 pt-4 border-t border-gray-50 text-blue-600 text-xs font-black flex items-center gap-2"
+                  class="mt-4 pt-4 border-t border-gray-50 text-blue-600 text-xs font-black flex items-center justify-between gap-2 w-full"
                 >
                   استكشف المحتوى
                   <span
@@ -893,6 +928,7 @@
                   >
                 </div>
               {/if}
+              </div>
             </div>
           {/each}
         </div>
@@ -934,6 +970,8 @@
         </div>
       {/if}
     {:else if filteredLectures.length > 0}
+
+
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
         {#each filteredLectures as lecture (lecture.lecture_id)}
           <div
@@ -942,105 +980,91 @@
             on:click={() => goto(`/lecture/${lecture.lecture_id}`)}
             on:keydown={(e) =>
               e.key === "Enter" && goto(`/lecture/${lecture.lecture_id}`)}
-            class="group bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 text-right flex flex-col justify-between cursor-pointer relative overflow-hidden"
+            class="group bg-white rounded-2xl shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 text-right flex flex-col cursor-pointer relative overflow-hidden border border-gray-100 p-0"
           >
-            <div
-              class="absolute -left-6 -top-6 text-gray-50 opacity-50 group-hover:scale-150 transition-transform duration-700 pointer-events-none"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-32 w-32"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"
-                />
-              </svg>
-            </div>
-
-            <div class="relative z-10 w-full mb-6">
-              <div class="flex items-center justify-between mb-4">
-                <div
-                  class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300 shadow-sm"
-                  aria-hidden="true"
-                >
+          
+            <!-- Thumbnail area -->
+            <div class="relative w-full h-48 bg-slate-100 overflow-hidden">
+              {#if lecture.lecture_image}
+                <div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style="background-image: url('{FILE_URL}{lecture.lecture_image}')"></div>
+              {:else}
+                <div class="absolute inset-0 bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center transition-transform duration-700 group-hover:scale-105">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    class="h-6 w-6"
-                    fill="none"
+                    class="h-20 w-20 text-blue-200"
+                    fill="currentColor"
                     viewBox="0 0 24 24"
-                    stroke="currentColor"
                   >
                     <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-                    />
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"
                     />
                   </svg>
                 </div>
-                <span class="text-[10px] font-black text-gray-300 bg-gray-50 px-3 py-1 rounded-full">
-                  {formatDate(lecture.created_at)}
-                </span>
+              {/if}
+              <!-- Duration / Date badge overlay -->
+              <div class="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] font-bold px-2 py-1 rounded backdrop-blur-sm">
+                {formatDate(lecture.created_at)}
               </div>
-
-              <h3 class="text-xl font-bold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors">
-                {lecture.title}
-              </h3>
-              <p class="text-gray-400 text-sm line-clamp-2 font-medium leading-relaxed">
-                {lecture.description || "لا يوجد وصف لهذه المحاضرة"}
-              </p>
             </div>
 
-            <div class="relative z-10 space-y-3">
+            <!-- Content Area -->
+            <div class="p-4 flex flex-col flex-grow bg-white z-10 relative">
+              <div class="flex gap-3 items-start w-full">
+                <!-- Avatar icon -->
+                <div class="flex-shrink-0 w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <!-- Text Details -->
+                <div class="flex flex-col w-full">
+                  <h3 class="text-[15px] font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 leading-tight">
+                    {lecture.title}
+                  </h3>
+                  <p class="text-gray-500 text-[12px] line-clamp-1 font-medium mt-1">
+                    {lecture.description || "لا يوجد وصف لهذه المحاضرة"}
+                  </p>
+                </div>
+              </div>
+
+            <div class="relative z-10 space-y-2 mt-4 ml-12">
               {#if ownerLectureMode}
                 <div class="grid grid-cols-2 gap-2" on:click|stopPropagation role="none">
                   <button
                     on:click={(e) => startLectureEdit(lecture, e)}
-                    class="py-2.5 text-[11px] font-black text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all"
+                    class="py-1.5 text-[11px] font-black text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white rounded-lg transition-all"
                   >
-                    ✏️ تعديل
+                    تعديل
                   </button>
                   <button
                     on:click={(e) => deleteLecture(lecture.lecture_id, e)}
                     disabled={deletingLectureId === lecture.lecture_id}
-                    class="py-2.5 text-[11px] font-black text-red-500 bg-red-50/50 hover:bg-red-500 hover:text-white rounded-xl transition-all disabled:opacity-50"
+                    class="py-1.5 text-[11px] font-black text-red-500 bg-red-50 hover:bg-red-500 hover:text-white rounded-lg transition-all disabled:opacity-50"
                   >
-                    {deletingLectureId === lecture.lecture_id ? "..." : "🗑️ حذف"}
+                    حذف
                   </button>
                 </div>
                 
-                {#if lecture.quiz && lecture.quiz.length > 0}
-                  <button
-                    on:click={(e) => manageQuiz(lecture.quiz![0].quiz_id, e)}
-                    class="w-full py-3 bg-white border-2 border-slate-100 text-slate-700 text-xs font-black rounded-xl hover:bg-slate-50 hover:border-slate-200 transition-all flex items-center justify-center gap-2"
-                  >
-                    📝 تعديل الكويز
-                  </button>
-                {:else}
-                  <button
-                    on:click={(e) => openQuizModal(lecture, e)}
-                    disabled={generatingQuizId === lecture.lecture_id}
-                    class="w-full py-3 bg-blue-600 text-white text-xs font-black rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center justify-center gap-2"
-                  >
-                    {generatingQuizId === lecture.lecture_id ? "⏳ جاري التوليد..." : "✨ إنشاء كويز ذكي"}
-                  </button>
-                {/if}
-              {:else}
-                <button
-                  class="w-full py-3 bg-gray-50 text-gray-400 text-xs font-black rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-all flex items-center justify-center gap-2"
-                >
-                  بدء المحاضرة
-                  <span>←</span>
-                </button>
+               {#if lecture.quiz_id}
+  <button
+    on:click={(e) => manageQuiz(lecture.quiz_id, e)}
+    class="w-full py-2 bg-white border border-slate-200 text-slate-700 text-[11px] font-black rounded-lg hover:bg-slate-50 transition-all flex items-center justify-center gap-1.5"
+  >
+    تعديل الكويز
+  </button>
+{:else}
+  <button
+    on:click={(e) => openQuizModal(lecture, e)}
+    disabled={generatingQuizId === lecture.lecture_id}
+    class="w-full py-2 bg-blue-600 text-white text-[11px] font-black rounded-lg hover:bg-blue-700 transition-all shadow-md shadow-blue-100 flex items-center justify-center gap-1.5"
+  >
+    {generatingQuizId === lecture.lecture_id ? "..." : "كويز"}
+  </button>
+{/if}
               {/if}
+            </div>
+            <!-- End Content Area -->
             </div>
           </div>
         {/each}

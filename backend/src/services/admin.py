@@ -10,12 +10,17 @@ from src.models.Classroom import Classroom
 from src.models.Invitation import Invitation
 from datetime import datetime, timezone, timedelta
 from src.models.User import User
+from src.models.Course import Course
+from src.models.Teacher_Assignment import Teacher_Assignment
 from sqlalchemy.orm import selectinload
+from fastapi import UploadFile
+import os
+import uuid
 
 
 
 class AdminService:
-
+    UPLOAD_DIR = "media/thum"
     @staticmethod
     async def create_classroom(db: AsyncSession, data: ClassroomCreate):
         new_class = Classroom(class_name=data.name)
@@ -24,11 +29,48 @@ class AdminService:
         await db.refresh(new_class)
         return new_class
     
-    
+
+    @staticmethod
+    async def upload_classroom_image(db: AsyncSession, classroom_id: int, file: UploadFile):
+        statement = select(Classroom).where(Classroom.class_id == classroom_id)
+        result = await db.exec(statement)
+        classroom = result.first()
+
+        if not classroom:
+            raise HTTPException(status_code=404, detail="الكلاس غير موجود")
+
+        try:
+        # 1. التحقق من الحجم قبل القراءة الكاملة (اختياري لكن أفضل)
+            content = await file.read()
+
+        # 2. إنشاء اسم فريد للملف لتجنب تكرار الأسماء
+            extension = file.filename.split(".")[-1]
+            file_name = f"cls_{classroom_id}_{uuid.uuid4().hex}.{extension}"
+            
+            os.makedirs(AdminService.UPLOAD_DIR, exist_ok=True)
+            file_path = os.path.join(AdminService.UPLOAD_DIR, file_name)
+
+            with open(file_path, "wb") as f:
+                f.write(content)
+
+            if classroom.class_image and os.path.exists(classroom.class_image):
+                try: os.remove(classroom.class_image)
+                except: pass
+
+            classroom.class_image = file_path.replace("\\", "/")
+        
+            await db.commit()
+            await db.refresh(classroom)
+
+            return {"message": "تم الرفع بنجاح", "image_url": file_path}
+
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
 
     @staticmethod
     async def delete_classroom(db: AsyncSession, classroom_id: int):
-        statement = select(Classroom).where(Classroom.class_id == classroom_id)
+        statement = select(Classroom).where(Classroom.class_id == classroom_id).options(selectinload(Classroom.course).selectinload(Course.lecture))
         result = await db.exec(statement)
         classroom = result.first()
 
@@ -37,6 +79,19 @@ class AdminService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="هذا الكلاس غير موجود"
             )
+
+        for course in classroom.course:
+            for lec in course.lecture:
+                if lec.lecture_image and os.path.exists(lec.lecture_image):
+                    try: os.remove(lec.lecture_image)
+                    except: pass
+            if course.course_thumbnail and os.path.exists(course.course_thumbnail):
+                try: os.remove(course.course_thumbnail)
+                except: pass
+                
+        if classroom.class_image and os.path.exists(classroom.class_image):
+            try: os.remove(classroom.class_image)
+            except: pass
 
         await db.delete(classroom)
         await db.commit()
@@ -98,20 +153,13 @@ class AdminService:
     
     @staticmethod
     async def get_all_users(db: AsyncSession, roles_id: int = None, state_id: int = None):
-
         stmt = (
-        select(
-            User.user_id,
-            User.name,
-            User.email,
-            User.phone,
-            User.roles_id,
-            Roles.roles_name,
-            State.name.label("state_name"),
-            User.created_at
+            select(User)
+            .options(
+                selectinload(User.roles),
+                selectinload(User.state),
+                selectinload(User.teacher_assignment).selectinload(Teacher_Assignment.classroom)
             )
-        .join(Roles, Roles.roles_id == User.roles_id)
-        .join(State, State.state_id == User.state_id)
         )
     
         if roles_id is not None:
@@ -120,30 +168,24 @@ class AdminService:
             stmt = stmt.where(User.state_id == state_id)
         
         result = await db.exec(stmt)   
-        rows = result.mappings().all()
+        users = result.all()
 
         return [
-            GetUsersResponse(**row) for row in rows
- 
+            GetUsersResponse(
+                user_id=u.user_id,
+                name=u.name,
+                email=u.email,
+                phone=u.phone,
+                roles_id=u.roles_id,
+                roles_name=u.roles.roles_name if u.roles else "مستخدم",
+                state_id=u.state_id,
+                state_name=u.state.name if u.state else "غير معروف",
+                created_at=u.created_at,
+                class_name=", ".join([ta.classroom.class_name for ta in u.teacher_assignment if ta.classroom]) if u.teacher_assignment else None
+            ) for u in users
         ]
     
-    @staticmethod
-    async def update_user_permissions(db: AsyncSession, target_user_id: int, new_role_id: int):
-        statement = select(User).where(User.user_id == target_user_id)
-        user = (await db.exec(statement)).first()
-    
-        if not user:
-            raise HTTPException(status_code=404, detail="المستخدم غير موجود")
-
-        if user.roles_id in [1,3,4]:
-            raise HTTPException(
-                status_code=403, 
-                detail="لا يمكنك تعديل صلاحيات الطلبة أو الأساتذة من هنا"
-            )
-        user.roles_id = new_role_id
-        await db.commit()
-        return {"message": "تم تحديث الصلاحيات بنجاح"}
-
+   
     @staticmethod
     async def create_custom_role(db: AsyncSession, data: RoleCreateWithPermissions):
         new_role = Roles(roles_name=data.roles_name)
@@ -204,13 +246,3 @@ class AdminService:
     
 
 
-
-    @staticmethod
-    async def get_invitable_roles(db: AsyncSession):
-        statement = select(Roles).where(Roles.roles_name != "Super Admin" ,
-                                        Roles.roles_name != "Student",
-                                        Roles.roles_name != "Teacher"
-                                         
-                                          )
-        result = await db.exec(statement)
-        return result.all()

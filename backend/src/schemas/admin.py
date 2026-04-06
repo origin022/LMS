@@ -10,6 +10,7 @@ class ClassroomCreate(BaseModel):
 class ClassroomRead(BaseModel):
     class_id: int
     class_name: str
+    class_image: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -34,7 +35,9 @@ class GetUsersResponse(BaseModel):
     phone:str
     roles_id: int
     roles_name:str
+    state_id: int
     state_name:str
+    class_name: Optional[str] = None
 
 
 class RoleCreateWithPermissions(BaseModel):

@@ -227,3 +227,22 @@ async def bulk_update_quiz(
         data=data,
         current_user=current_user
     )
+
+
+@router.patch("/teacher/courses/{course_id}/thumbnail", status_code=status.HTTP_200_OK)
+async def update_course_thumbnail(
+    course_id: int,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_session),
+    current_user = Depends(PermissionChecker(["manage corse"]))
+):
+    return await TeacherService.upload_course_thumbnail(db, course_id, file, current_user)
+
+@router.patch("/teacher/lectures/{lecture_id}/thumbnail", status_code=status.HTTP_200_OK)
+async def update_lecture_thumbnail(
+    lecture_id: int,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_session),
+    current_user = Depends(PermissionChecker(["Publish"]))
+):
+    return await TeacherService.upload_lecture_image(db, lecture_id, file, current_user)
