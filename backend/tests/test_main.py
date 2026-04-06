@@ -86,5 +86,4 @@ async def test_public_and_interactions(client: AsyncClient):
 async def test_profile_and_donations(client: AsyncClient):
     assert (await client.get("/api/v1/profile")).status_code in [200, 401]
     assert (await client.post("/api/v1/profile/picture", files={"file": ("img.jpg", b"")})).status_code in [200, 401, 422]
-    assert (await client.post("/api/v1/donation/trigger", json={"amount": 1000})).status_code in [201, 401, 422]
-ode in [200, 401, 404]
+    assert (await client.post("/api/v1/donation/trigger", json={"amount": 1000})).status_code in [201, 401, 422]
