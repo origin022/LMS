@@ -32,7 +32,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[str(origin).rstrip("/") for origin in config.BACKEND_CORS_ORIGINS] or ["http://localhost:5173", "http://localhost"],
+    allow_origins=[str(origin).rstrip("/") for origin in config.BACKEND_CORS_ORIGINS] or ["http://localhost:5173", "http://localhost" , "https://lms-frontend-t7q6.onrender.com"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
