@@ -15,6 +15,8 @@ CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 # 3. Builder Stage: For production build
 FROM base AS builder
 COPY . .
+ARG VITE_API_BASE_URL
+ARG VITE_API_URL
 RUN npm run build
 
 # 4. Production Stage: Serve static files using Nginx

@@ -152,6 +152,14 @@ async function handleAutoEnroll() {
     commentError = "";
     submitting = true;
 
+    // Failsafe: Reset submitting after 10 seconds
+    const timeout = setTimeout(() => {
+        if (submitting) {
+            submitting = false;
+            commentError = "استغرق الطلب وقتاً طويلاً، حاول مجدداً";
+        }
+    }, 10000);
+
     try {
       const res = await apiFetch(`/interactions/lectures/${id}/comments`, {
         method: "POST",
@@ -160,6 +168,8 @@ async function handleAutoEnroll() {
           lecture_id: id,
         }),
       });
+      clearTimeout(timeout);
+      
       if (res.ok) {
         const added = await res.json();
         if (!added.user) {
@@ -168,7 +178,10 @@ async function handleAutoEnroll() {
             profile_picture_url: null,
           };
         }
-        comments = [added, ...comments];
+        // تجنب التكرار (لو الويب سوكت أرسله قبلي)
+        if (!comments.some(c => c.comment_id === added.comment_id)) {
+            comments = [added, ...comments];
+        }
         newComment = "";
       } else {
         if (res.status === 429) {
@@ -181,7 +194,8 @@ async function handleAutoEnroll() {
         }
       }
     } catch (err) {
-      commentError = "خطأ في الاتصال، حاول مجدداً";
+      clearTimeout(timeout);
+      commentError = "خطأ في الاتصال بالسيرفر";
     } finally {
       submitting = false;
     }

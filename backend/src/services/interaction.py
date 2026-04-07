@@ -1,4 +1,4 @@
-from http.client import HTTPException
+from fastapi import HTTPException
 from sqlmodel import select, and_ , desc 
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.core.security import get_owned_obj

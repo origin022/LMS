@@ -1,11 +1,10 @@
-from fastapi import APIRouter, Depends, status, Request
+from fastapi import APIRouter, Depends, status, Request, WebSocket, WebSocketDisconnect
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.core.dep import get_session
 from src.core.auth import PermissionChecker, get_current_user
 from src.schemas.interaction import CommentCreate, CommentUpdate, Commentred, LikeToggle, CommentResponse
 from src.services.interaction import InteractionS as service
 from src.core.security import limiter, SENSITIVE_LIMIT, DEFAULT_LIMIT
-from fastapi import WebSocket, WebSocketDisconnect
 from src.core.wepsocket import manager
 from src.models.User import User
 from typing import List
@@ -102,13 +101,11 @@ async def update_comment(
 
 
 
-import asyncio
-
 @router.websocket("/ws/{lecture_id}")
 async def lecture_comments_websocket(websocket: WebSocket, lecture_id: int):
     await manager.connect(websocket, lecture_id)
     try:
         while True:
-            await asyncio.sleep(30)
+            await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket, lecture_id)

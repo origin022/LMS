@@ -3,7 +3,7 @@
   import DonationButton from './DonationButton.svelte';
 </script>
 
-<header class="h-16 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-8 sticky top-0 z-40">
+<header class="h-16 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-8 sticky top-0 z-40 transition-colors">
   <div class="flex items-center gap-6">
     <button 
       on:click={() => sidebarOpen.update(n => !n)} 
@@ -15,19 +15,26 @@
       </svg>
     </button>
 
-    <div class="hidden md:block text-right">
+    <a href="/home" class="hidden md:block text-right hover:opacity-80 transition-opacity">
         <h1 class="text-lg font-black text-gray-900 tracking-tight">منصة الجاحظ</h1>
         <p class="text-[9px] text-gray-400 font-bold uppercase tracking-widest -mt-1">نظام التعلم الذكي</p>
-    </div>
+    </a>
+
+    <nav class="hidden lg:flex items-center gap-6 mr-4 border-r border-gray-100 pr-6">
+      <a href="/home" class="text-sm font-black text-gray-500 hover:text-blue-600 transition-colors">الرئيسية</a>
+      <a href="/classrooms" class="text-sm font-black text-gray-500 hover:text-blue-600 transition-colors">المجالات الدراسية</a>
+    </nav>
   </div>
 
   <div class="flex items-center gap-6">
     <DonationButton />
     <div class="h-8 w-px bg-gray-100 hidden sm:block"></div>
-    <img 
-      src="/llogo.png" 
-      alt="Logo" 
-      class="h-14 w-auto object-contain hover:scale-105 transition-transform" 
-    />
+    <a href="/home">
+      <img 
+        src="/llogo.png" 
+        alt="Logo" 
+        class="h-14 w-auto object-contain hover:scale-105 transition-transform" 
+      />
+    </a>
   </div>
 </header>

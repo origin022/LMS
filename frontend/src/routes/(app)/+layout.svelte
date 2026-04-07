@@ -17,15 +17,13 @@
       }
 
       const data = await res.json();
-
       let imageBlobUrl = "";
 
-      // جلب الصورة برمجياً لتجاوز مشكلة 401
       if (data.picture) {
         try {
           const imageRes = await apiFetch("/picture/me");
           if (imageRes.ok) {
-            const blob = (await imageRes.ok) ? await imageRes.blob() : null;
+            const blob = await imageRes.blob();
             if (blob) {
               imageBlobUrl = URL.createObjectURL(blob);
             }
@@ -37,7 +35,6 @@
 
       const userData = {
         name: data.name || "",
-        // الرابط الآن محلي (Object URL) ولا يحتاج لتوثيق عند العرض
         profilePicture: imageBlobUrl,
         role: data.role || "",
         user_id: data.user_id ?? null,
