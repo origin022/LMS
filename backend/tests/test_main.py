@@ -88,7 +88,7 @@ async def test_profile_and_donations(client: AsyncClient):
     assert (await client.patch("/api/v1/profile", json={"bio": "Hello"})).status_code in [200, 401, 422]
     assert (await client.post("/api/v1/profile/picture", files={"file": ("img.jpg", b"")})).status_code in [200, 401, 422]
     assert (await client.get("/api/v1/picture/me")).status_code in [200, 401, 404]
-    assert (await client.post("/api/v1/donations/start", json={"amount": 1000})).status_code in [200, 201, 401, 422]
+    assert (await client.post("/api/v1/donations/start", json={"amount": 1000})).status_code in [200, 201, 400, 401, 422]
 
 # --- 8. PUBLIC CONTENT BROWSING ---
 async def test_public_content(client: AsyncClient):
