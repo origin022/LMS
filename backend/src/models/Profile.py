@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from src.models.State import State
 
 class Profile(SQLModel , table =True) :
-    user_id : int| None = Field(default= None , primary_key=True , foreign_key="user.user_id")
+    user_id : int| None = Field(default= None , primary_key=True , foreign_key="user.user_id", ondelete="CASCADE")
     profile_picture_data: Optional[bytes] = Field(
         sa_column=Column(LargeBinary, nullable=True)
     )

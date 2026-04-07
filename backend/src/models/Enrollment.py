@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 class Enrollment(SQLModel , table= True):
     enrollment_id :int|None = Field(default=None , primary_key= True)
-    student_id : int = Field(foreign_key='user.user_id', index=True , nullable=False)
+    student_id : int = Field(foreign_key='user.user_id', index=True , nullable=False, ondelete="CASCADE")
     course_id : int = Field(foreign_key='course.course_id', index=True , nullable=False)
     created_at: datetime = Field(
     sa_column=Column(DateTime(timezone=True), nullable=False),

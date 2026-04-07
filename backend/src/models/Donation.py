@@ -20,7 +20,7 @@ class Donation(SQLModel, table=True):
     status: PaymentStatus = Field(default=PaymentStatus.PENDING)
     provider_transaction_id: Optional[str] = Field(default=None, index=True)
     
-    user_id: Optional[int] = Field(default=None, foreign_key="user.user_id")
+    user_id: Optional[int] = Field(default=None, foreign_key="user.user_id", ondelete="CASCADE")
     
     
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

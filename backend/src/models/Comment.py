@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 class Comment(SQLModel , table = True):
     comment_id :int |None = Field(default=None , primary_key=True)
-    user_id :int = Field(foreign_key='user.user_id', index=True , nullable=False)
+    user_id :int = Field(foreign_key='user.user_id', index=True , nullable=False, ondelete="CASCADE")
     lecture_id : int = Field(foreign_key='lecture.lecture_id', index=True , nullable=False)
     text :str = Field(nullable=False)
     submission_time: datetime = Field(

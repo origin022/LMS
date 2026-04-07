@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 class Quiz_Attempt (SQLModel , table = True):
     attempt_id : int |None = Field(default=None , primary_key=True)
-    student_id :int = Field(foreign_key='user.user_id', index=True ,nullable=False)
+    student_id :int = Field(foreign_key='user.user_id', index=True ,nullable=False, ondelete="CASCADE")
     question_id :int = Field(foreign_key='question.question_id', index=True  ,nullable=False)
     answer_id : int = Field(foreign_key='question_option.option_id', index=True, nullable=False)
     quiz_id: int = Field(foreign_key='quiz.quiz_id', index=True, nullable=False)
