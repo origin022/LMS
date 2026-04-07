@@ -97,7 +97,7 @@
     {/if}
 
     <a href="/classrooms" class="block px-4 py-3 text-gray-600 hover:text-blue-600 font-black text-sm transition-colors">
-      الكلاسات
+      المجالات
     </a>
   </nav>
 

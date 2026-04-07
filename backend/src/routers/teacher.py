@@ -1,4 +1,4 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile,  status ,File
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile,  status ,File, Request
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.core.auth import PermissionChecker
 from src.core.dep import get_session
@@ -16,6 +16,7 @@ from src.schemas.teacher import (
     QuizCreate,
     QuizBulkUpdate
 )
+from src.core.security import limiter, SENSITIVE_LIMIT, DEFAULT_LIMIT, HEAVY_LIMIT
 
 router = APIRouter(
     prefix="",
@@ -25,7 +26,9 @@ router = APIRouter(
 
 
 @router.post("/teacher/courses",  response_model=CourseBasic)
+@limiter.limit(SENSITIVE_LIMIT)
 async def create_course(
+    request: Request,
     data: CourseCreate,
     db: AsyncSession = Depends(get_session),
     current_user = Depends(PermissionChecker(["manage corse"])),
@@ -41,7 +44,9 @@ async def create_course(
 
 
 @router.get("/teacher/courses", response_model=list[CourseBasic])
+@limiter.limit(DEFAULT_LIMIT)
 async def get_teacher_courses(
+    request: Request,
     db: AsyncSession = Depends(get_session),
     current_user = Depends(PermissionChecker(["manage corse"]))
 ):
@@ -49,7 +54,9 @@ async def get_teacher_courses(
 
 
 @router.delete("/teacher/courses/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit(SENSITIVE_LIMIT)
 async def delete_course(
+    request: Request,
     course_id: int,
     db: AsyncSession = Depends(get_session),
     current_user = Depends(PermissionChecker(["manage corse"]))
@@ -64,7 +71,9 @@ async def delete_course(
 
 
 @router.post("/teacher/courses/{course_id}/lectures", status_code=status.HTTP_201_CREATED, response_model=LectureRead)
+@limiter.limit(SENSITIVE_LIMIT)
 async def create_lecture(
+    request: Request,
     data: LectureCreate,
     db: AsyncSession = Depends(get_session),
     current_user = Depends(PermissionChecker(["Publish"]))
@@ -80,7 +89,9 @@ async def create_lecture(
 
 
 @router.delete("/lectures/{lecture_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit(SENSITIVE_LIMIT)
 async def delete_lecture(
+    request: Request,
     lecture_id: int,
     db: AsyncSession = Depends(get_session),
     current_user = Depends(PermissionChecker(["Publish"]))
@@ -102,7 +113,9 @@ async def delete_lecture(
 
 
 @router.get("/quizzes/{quiz_id}/questions",response_model=QuizRead)
+@limiter.limit(DEFAULT_LIMIT)
 async def get_quiz_questions(
+    request: Request,
     quiz_id: int,
     db: AsyncSession = Depends(get_session),
     current_user = Depends(PermissionChecker(["Assign Quiz"]))
@@ -113,7 +126,9 @@ async def get_quiz_questions(
 
 
 @router.patch("/courses/{course_id}", response_model=CourseBasic)
+@limiter.limit(SENSITIVE_LIMIT)
 async def update_course(
+    request: Request,
     course_id: int,
     data: CourseUpdate,
     db: AsyncSession = Depends(get_session),
@@ -127,7 +142,9 @@ async def update_course(
     )
 
 @router.patch("/lectures/{lecture_id}", response_model=LectureUpdate)
+@limiter.limit(SENSITIVE_LIMIT)
 async def update_lecture(
+    request: Request,
     lecture_id: int,
     data: LectureUpdate,
     db: AsyncSession = Depends(get_session),
@@ -142,7 +159,9 @@ async def update_lecture(
 
 
 @router.delete("/quizzes/{quiz_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit(SENSITIVE_LIMIT)
 async def delete_quiz(
+    request: Request,
     quiz_id: int,
     db: AsyncSession = Depends(get_session),
     current_user = Depends(PermissionChecker(["Assign Quiz"]))
@@ -157,7 +176,9 @@ async def delete_quiz(
 
 
 @router.post("/complete-teacher-setup")
+@limiter.limit(SENSITIVE_LIMIT)
 async def complete_teacher_setup(
+    request: Request,
     data: AssignClassSchema,
     db: AsyncSession = Depends(get_session)
 ):
@@ -173,7 +194,9 @@ async def complete_teacher_setup(
 
 
 @router.post("/lectures/{lecture_id}/upload-video",status_code=status.HTTP_201_CREATED,)
+@limiter.limit(HEAVY_LIMIT)
 async def upload_lecture_video(
+    request: Request,
     lecture_id: int,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...), 
@@ -196,7 +219,9 @@ async def upload_lecture_video(
 
 
 @router.post("/generate-ai", status_code=status.HTTP_201_CREATED)
+@limiter.limit(SENSITIVE_LIMIT)
 async def generate_quiz_by_ai(
+    request: Request,
     data: QuizCreate,
     session: AsyncSession = Depends(get_session),
     current_user = Depends(PermissionChecker(["Assign Quiz"]))
@@ -215,7 +240,9 @@ async def generate_quiz_by_ai(
         )
 
 @router.patch("/quizzes/{quiz_id}/bulk")
+@limiter.limit(SENSITIVE_LIMIT)
 async def bulk_update_quiz(
+    request: Request,
     quiz_id: int,
     data: QuizBulkUpdate,
     db: AsyncSession = Depends(get_session),
@@ -230,7 +257,9 @@ async def bulk_update_quiz(
 
 
 @router.patch("/teacher/courses/{course_id}/thumbnail", status_code=status.HTTP_200_OK)
+@limiter.limit(HEAVY_LIMIT)
 async def update_course_thumbnail(
+    request: Request,
     course_id: int,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_session),
@@ -239,7 +268,9 @@ async def update_course_thumbnail(
     return await TeacherService.upload_course_thumbnail(db, course_id, file, current_user)
 
 @router.patch("/teacher/lectures/{lecture_id}/thumbnail", status_code=status.HTTP_200_OK)
+@limiter.limit(HEAVY_LIMIT)
 async def update_lecture_thumbnail(
+    request: Request,
     lecture_id: int,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_session),

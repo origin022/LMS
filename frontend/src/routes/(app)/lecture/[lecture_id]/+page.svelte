@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import { page } from "$app/stores";
   import { apiFetch, BASE_URL, FILE_URL } from "$lib/api";
   import { userStore } from "$lib/authStore";
@@ -51,6 +51,7 @@
   let parsedSubtitles: SubtitleSegment[] = [];
   let showSubtitles = true;
   let showQuizModal = false;  
+  let submitting = false;
 
 
   $: lectureId = $page.params.lecture_id;
@@ -64,9 +65,6 @@
     }
   }
 
-  $: activeSubtitle = parsedSubtitles.find(
-    (s) => currentTime >= s.start && currentTime <= s.end,
-  );
 
   async function loadData() {
     if (!lectureId) return;
@@ -133,55 +131,59 @@ async function handleAutoEnroll() {
         if (res.ok) console.log("Successfully enrolled");
         else console.warn("Enrollment skip: Already enrolled or forbidden");
       } else {
-        // إذا كان الخطأ 500 مثلاً، ربما تريد ترك الباب مفتوحاً للمحاولة لاحقاً
-        // لكن لمنع الـ Loop اللحظي، يفضل وضع enrolled = true هنا أيضاً
         enrolled = true;
       }
     } catch (err) {
       console.error("Auto-enrollment error:", err);
-      enrolled = true; // نغلق الحلقة حتى في حال خطأ الشبكة لضمان استقرار المتصفح
+      enrolled = true; 
     } finally {
       enrolling = false;
     }
   }
 
-  // المراقب (Reactive Statement)
   $: if (currentTime >= 5 && !enrolled && !enrolling) {
     handleAutoEnroll();
   }
 
   async function submitComment() {
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || submitting) return;
     const id = lecture?.lecture_id;
     if (!id) return;
     commentError = "";
+    submitting = true;
 
-    const res = await apiFetch(`/interactions/lectures/${id}/comments`, {
-      method: "POST",
-      body: JSON.stringify({
-        text: newComment,
-        lecture_id: id,
-      }),
-    });
-    if (res.ok) {
-      const added = await res.json();
-
-      if (!added.user) {
-        added.user = {
-          name: $userStore.name,
-          profile_picture_url: null,
-        };
-      }
-
-      comments = [added, ...comments];
-      newComment = "";
-    } else {
-      if (res.status === 403) {
-        commentError = "ليس لديك صلاحية لإرسال التعليقات";
+    try {
+      const res = await apiFetch(`/interactions/lectures/${id}/comments`, {
+        method: "POST",
+        body: JSON.stringify({
+          text: newComment,
+          lecture_id: id,
+        }),
+      });
+      if (res.ok) {
+        const added = await res.json();
+        if (!added.user) {
+          added.user = {
+            name: $userStore.name,
+            profile_picture_url: null,
+          };
+        }
+        comments = [added, ...comments];
+        newComment = "";
       } else {
-        const err = await res.json().catch(() => ({}));
-        commentError = err.detail || "فشل إرسال التعليق";
+        if (res.status === 429) {
+          commentError = "أرسلت الكثير من التعليقات، انتظر قليلاً";
+        } else if (res.status === 403) {
+          commentError = "ليس لديك صلاحية لإرسال التعليقات";
+        } else {
+          const err = await res.json().catch(() => ({}));
+          commentError = err.detail || "فشل إرسال التعليق";
+        }
       }
+    } catch (err) {
+      commentError = "خطأ في الاتصال، حاول مجدداً";
+    } finally {
+      submitting = false;
     }
   }
 
@@ -198,8 +200,87 @@ async function handleAutoEnroll() {
       console.error("Failed to delete comment", err);
     }
   }
-  console.log(lecture);
-  onMount(loadData);
+
+// 1. جعل فتح الاتصال مرتبط بتغير الـ ID وإغلاق القديم تلقائياً
+  let ws: WebSocket | null = null;
+  let reconnectTimer: any;
+
+  function connectWebSocket() {
+  if (!lectureId) return;
+
+  // اغلق أي اتصال موجود بشكل قاطع
+  if (ws) {
+    ws.onclose = null;
+    ws.close();
+    ws = null;
+  }
+
+  const wsUrl = `ws://localhost:8000/api/v1/interactions/ws/${lectureId}`;
+  ws = new WebSocket(wsUrl);
+
+  ws.onopen = () => {
+    console.log("WS connected");
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      const incoming = JSON.parse(event.data);
+      const exists = comments.some(c => c?.comment_id === incoming?.comment_id);
+      if (!exists) {
+        comments = [incoming, ...comments];
+      }
+    } catch {}
+  };
+
+  ws.onclose = () => {
+    ws = null;
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(connectWebSocket, 1000);
+  };
+
+  ws.onerror = () => {
+    // لا تفعل شيء
+  };
+}
+  // مراقبة الـ ID فقط، وإغلاق الاتصال القديم قبل فتح الجديد
+let prevLectureId: string;
+
+$: if (lectureId && lectureId !== prevLectureId) {
+  prevLectureId = lectureId;
+
+  if (ws) {
+    ws.close(1000);
+    ws = null;
+  }
+
+  connectWebSocket();
+}
+
+  onDestroy(() => {
+    clearTimeout(reconnectTimer);
+    if (ws) {
+      ws.onclose = null;
+      ws.close(1000);
+      ws = null;
+    }
+  });
+  // 2. تحسين أداء الترجمة: البحث فقط عندما تتغير الثواني وليس الفريمات
+let activeSubtitle: SubtitleSegment | undefined;
+
+let lastTime = 0;
+$: if (Math.floor(currentTime) !== lastTime) {
+  lastTime = Math.floor(currentTime);
+  activeSubtitle = parsedSubtitles.find(
+    (s) => currentTime >= s.start && currentTime <= s.end
+  );
+}
+
+  onMount(() => {
+    loadData();
+  });
+
+
+
 </script>
 
 <div
@@ -410,10 +491,10 @@ async function handleAutoEnroll() {
             {/if}
             <button
               on:click={submitComment}
-              disabled={!newComment.trim() || !$userStore.name}
+              disabled={!newComment.trim() || !$userStore.name || submitting}
               class="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-20 disabled:cursor-not-allowed disabled:hover:bg-indigo-600 text-white px-10 py-3 rounded-2xl font-bold text-sm transition-all active:scale-95 flex items-center gap-2"
             >
-              <span>إرسال</span>
+              <span>{submitting ? 'جاري الإرسال...' : 'إرسال'}</span>
               <Send size={16} />
             </button>
           </div>

@@ -162,11 +162,11 @@
         newClassName = "";
         selectedFile = null;
         if (fileInput) fileInput.value = ""; // تصفير حقل الملف
-        showMsg("تم إنشاء الكلاس بنجاح");
+        showMsg("تم إنشاء المجال بنجاح");
         loadData();
       } else {
         const err = await res.json();
-        showMsg(err.detail || "فشل إنشاء الكلاس", "error");
+        showMsg(err.detail || "فشل إنشاء المجال", "error");
       }
     } catch (e) {
       showMsg("حدث خطأ في الاتصال", "error");
@@ -183,7 +183,7 @@
   }
 
   async function deleteClass(id: number) {
-    if (!confirm("حذف الكلاس؟")) return;
+    if (!confirm("حذف المجال؟")) return;
     const res = await apiFetch(`/admin/classrooms/${id}`, {
       method: "DELETE",
     });
@@ -271,7 +271,7 @@
     class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-[2.5rem] shadow-sm border border-slate-100"
   >
     <div class="flex gap-2 overflow-x-auto no-scrollbar">
-      {#each [["classrooms", "الكلاسات"], ["users", "المستخدمين"], ["invites", "الدعوات"], ["roles", "إنشاء رتبة"]] as [id, label]}
+      {#each [["classrooms", "المجالات"], ["users", "المستخدمين"], ["invites", "الدعوات"], ["roles", "إنشاء رتبة"]] as [id, label]}
         <button
           on:click={() => (activeTab = id as any)}
           class="px-6 py-3 rounded-2xl text-xs font-black transition-all {activeTab ===
@@ -366,7 +366,7 @@
             class="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm h-fit"
           >
             <h3 class="text-xl font-black mb-8 text-slate-800">
-              إضافة كلاس جديد
+              إضافة مجال دراسي جديد
             </h3>
 
             <div class="space-y-4">
@@ -471,7 +471,7 @@
               <tr>
                 <th class="px-8 py-5 text-right">البيانات الشخصية</th>
                 {#if isShowingTeachers}
-                  <th class="px-8 py-5 text-right">الكلاس / المادة</th>
+                  <th class="px-8 py-5 text-right">المجال الدراسي</th>
                 {/if}
                 <th class="px-8 py-5 text-right">الرتبة الحالية</th>
                 <th class="px-8 py-5 text-right">الحالة</th>
@@ -640,7 +640,7 @@
           <div class="space-y-8 mt-8">
             <input
               bind:value={newRoleName}
-              placeholder="اسم الرتبة (مثال: مشرف كلاس)"
+              placeholder="اسم الرتبة (مثال: مشرف مجال)"
               class="w-full p-5 bg-slate-50 border-none rounded-3xl outline-none font-black text-blue-600"
             />
 

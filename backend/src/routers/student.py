@@ -1,10 +1,11 @@
 from src.core.dep import get_session
 from sqlmodel.ext.asyncio.session import AsyncSession
-from fastapi import APIRouter, Depends, HTTPException,  status  
+from fastapi import APIRouter, Depends, HTTPException,  status, Request
 from src.core.auth import PermissionChecker
 from src.services.student import StudentService
 from src.services.teacher import TeacherService
 from src.schemas.student import  AnswerResponse, NextQuestionRequest, QuestionSubmission, RankResponse, ReadEnrollments
+from src.core.security import limiter, DEFAULT_LIMIT, SENSITIVE_LIMIT
 
 router = APIRouter(
     prefix="",
@@ -12,7 +13,9 @@ router = APIRouter(
 )
 
 @router.get("/enrollments", status_code=status.HTTP_200_OK , response_model=list[ReadEnrollments])
+@limiter.limit(DEFAULT_LIMIT)
 async def get_enrollments(
+    request: Request,
     db: AsyncSession = Depends(get_session),
     current_user = Depends(PermissionChecker(["view enrollments"])),
 ):
@@ -23,12 +26,15 @@ async def get_enrollments(
 
 
 @router.get("/courses/{course_id}/lectures/quiz-map")
-async def get_quiz_map(course_id: int, db: AsyncSession = Depends(get_session)):
+@limiter.limit(DEFAULT_LIMIT)
+async def get_quiz_map(request: Request, course_id: int, db: AsyncSession = Depends(get_session)):
     return await TeacherService.get_lectures_quiz_map(db, course_id)
 
 
 @router.post("/enrollments/trigger/{course_id}", status_code=status.HTTP_200_OK)
+@limiter.limit(SENSITIVE_LIMIT)
 async def trigger_automatic_enrollment(
+    request: Request,
     course_id: int,
     db: AsyncSession = Depends(get_session),
     current_user = Depends(PermissionChecker(["view enrollments"]))
@@ -46,7 +52,9 @@ async def trigger_automatic_enrollment(
 
 
 @router.delete("/enrollments/{course_id}")
+@limiter.limit(SENSITIVE_LIMIT)
 async def unenroll_from_course(
+    request: Request,
     course_id: int,
     db: AsyncSession = Depends(get_session),
     current_user = Depends(PermissionChecker(["view enrollments"]))
@@ -69,7 +77,9 @@ async def unenroll_from_course(
 
 
 @router.get("/next-question/{quiz_id}", response_model=NextQuestionRequest, response_model_exclude_none=True)
+@limiter.limit(DEFAULT_LIMIT)
 async def get_next_question(
+    request: Request,
     quiz_id: int,
     db: AsyncSession = Depends(get_session),
     current_user = Depends(PermissionChecker(["Quiz attempt"]))
@@ -82,7 +92,9 @@ async def get_next_question(
     )
 
 @router.post("/submit-answer", response_model=AnswerResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit(SENSITIVE_LIMIT)
 async def submit_answer(
+    request: Request,
     data: QuestionSubmission,
     db: AsyncSession = Depends(get_session),
     current_user = Depends(PermissionChecker(["Quiz attempt"]))
@@ -96,7 +108,9 @@ async def submit_answer(
 
 
 @router.get("/course-rank/{course_id}", response_model=RankResponse)
+@limiter.limit(DEFAULT_LIMIT)
 async def get_student_course_rank(
+    request: Request,
     course_id: int,
     db: AsyncSession = Depends(get_session),
     current_user = Depends(PermissionChecker(["Quiz attempt"]))

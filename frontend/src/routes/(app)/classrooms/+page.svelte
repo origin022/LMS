@@ -42,7 +42,7 @@
       <div
         class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"
       ></div>
-      <p class="text-sm font-medium">جاري تحميل الكلاسات...</p>
+      <p class="text-sm font-medium">جاري تحميل المجالات...</p>
     </div>
   {:else}
     <div
@@ -79,7 +79,7 @@
         <input
           type="text"
           bind:value={searchQuery}
-          placeholder="ابحث عن كلاس محدد..."
+          placeholder="ابحث عن مجال دراسي محدد..."
           class="w-full pr-12 pl-4 py-3.5 bg-white border border-gray-100 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-50 focus:border-blue-200 outline-none transition-all text-sm font-bold"
         />
       </div>

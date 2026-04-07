@@ -477,7 +477,7 @@
                   <tr>
                     <th class="px-8 py-5">البيانات الشخصية</th>
                     {#if isShowingTeachers}
-                      <th class="px-8 py-5">المادة / الكلاس</th>
+                      <th class="px-8 py-5">المجال الدراسي</th>
                     {/if}
                     <th class="px-8 py-5">الرتبة</th>
                     <th class="px-8 py-5">الحالة</th>

@@ -20,7 +20,7 @@
 
   async function handleRegister() {
     if (roles_id == '3' && !selectedClassId) {
-      error = 'يرجى اختيار الكلاس أولاً';
+      error = 'يرجى اختيار المجال الدراسي أولاً';
       return;
     }
     error = ''; success = ''; loading = true;
@@ -43,7 +43,7 @@
         return;
       }
 
-      success = 'تم إنشاء الحساب بنجاح! جاري التحويل للوجن...';
+      success = 'تم إنشاء الحساب بنجاح! جاري  تحويلك الى صقحة تسجيل الدخول...';
       setTimeout(() => goto('/login'), 2000);
     } catch (err) {
       error = 'تعذر الاتصال بالخادم';
@@ -89,9 +89,9 @@
 
         {#if roles_id == '3'}
           <div in:fly={{ y: -10, duration: 300 }} class="flex flex-col">
-            <label for="classroom" class="block text-xs text-blue-500 font-bold mr-1 mb-1 mt-1">اختر الكلاس الخاص بك</label>
+            <label for="classroom" class="block text-xs text-blue-500 font-bold mr-1 mb-1 mt-1">اختر المجال الدراسي الخاصة بك</label>
             <select id="classroom" bind:value={selectedClassId} class="w-full p-2.5 border border-blue-200 rounded-lg text-right bg-blue-50/50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all cursor-pointer font-bold">
-              <option value="">-- اختر الكلاس --</option>
+              <option value="">-- اختر المادة الدراسية --</option>
               {#each classrooms as cls}
                 <option value={cls.class_id}>{cls.class_name}</option>
               {/each}

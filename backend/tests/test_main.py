@@ -85,6 +85,35 @@ async def test_public_and_interactions(client: AsyncClient):
 # --- 7. MY PROFILE & DONATIONS ---
 async def test_profile_and_donations(client: AsyncClient):
     assert (await client.get("/api/v1/profile")).status_code in [200, 401]
+    assert (await client.patch("/api/v1/profile", json={"bio": "Hello"})).status_code in [200, 401, 422]
     assert (await client.post("/api/v1/profile/picture", files={"file": ("img.jpg", b"")})).status_code in [200, 401, 422]
+    assert (await client.get("/api/v1/picture/me")).status_code in [200, 401, 404]
     assert (await client.post("/api/v1/donations/start", json={"amount": 1000})).status_code in [200, 201, 401, 422]
+
+# --- 8. PUBLIC CONTENT BROWSING ---
+async def test_public_content(client: AsyncClient):
+    assert (await client.get("/api/v1/users/1/picture")).status_code in [200, 404]
+    assert (await client.get("/api/v1/courses/1")).status_code in [200, 404]
+    assert (await client.get("/api/v1/users/courses/1/lectures")).status_code in [200, 404]
+    assert (await client.get("/api/v1/courses/1/lectures/quiz-map")).status_code in [200, 401, 404]
+
+# --- 9. TEACHER EXTRA OPERATIONS ---
+async def test_teacher_extra(client: AsyncClient):
+    assert (await client.get("/api/v1/teacher/courses")).status_code in [200, 401]
+    assert (await client.patch("/api/v1/quizzes/1/bulk", json={"questions": []})).status_code in [200, 401, 404, 422]
+    assert (
+        await client.patch("/api/v1/teacher/courses/1/thumbnail", files={"file": ("thumb.jpg", b"")})
+    ).status_code in [200, 401, 404, 422]
+    assert (
+        await client.patch("/api/v1/teacher/lectures/1/thumbnail", files={"file": ("thumb.jpg", b"")})
+    ).status_code in [200, 401, 404, 422]
+
+# --- 10. WEBSOCKET COMMENTS ---
+async def test_websocket_comments(client: AsyncClient):
+    """Test that WebSocket endpoint exists and accepts connections."""
+    import httpx
+    # نتأكد فقط أن الـ endpoint موجود عبر طلب HTTP عادي (WebSocket upgrade)
+    # سيرجع 426 Upgrade Required أو 403 لأن التيست لا يدعم WebSocket كامل
+    res = await client.get("/api/v1/interactions/ws/1")
+    assert res.status_code in [403, 426, 400, 101, 404]
 

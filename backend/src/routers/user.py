@@ -1,16 +1,18 @@
 
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from src.services.EmailSe import EmailService
 from src.core.dep import get_session 
 from src.schemas.user import UserCreate, UserInvitationRegister, UserRead
 from src.services.user import  create_new_user, register_invited_user 
 from sqlmodel.ext.asyncio.session import AsyncSession
-from fastapi import APIRouter, Depends
+from src.core.security import limiter, AUTH_LIMIT, SENSITIVE_LIMIT, DEFAULT_LIMIT
 
 
 router = APIRouter( ) 
 @router.post("/register", response_model=UserRead)
+@limiter.limit(AUTH_LIMIT)
 async def register_user(
+    request: Request,
     user_data: UserCreate,
     background_tasks: BackgroundTasks, 
     db: AsyncSession = Depends(get_session)
@@ -36,7 +38,9 @@ async def register_user(
 
 
 @router.post("/register-by-token", response_model=UserRead)
+@limiter.limit(AUTH_LIMIT)
 async def register_by_token(
+    request: Request,
     user_data: UserInvitationRegister, 
     db: AsyncSession = Depends(get_session)
 ):
@@ -45,7 +49,9 @@ async def register_by_token(
 
 
 @router.get("/verify-email")
+@limiter.limit(SENSITIVE_LIMIT)
 async def verify_email(
+    request: Request,
     token: str, 
     db: AsyncSession = Depends(get_session)
 ):

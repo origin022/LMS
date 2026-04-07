@@ -6,9 +6,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
       POSTGRES_DB: lms
     ports:
-      - "5433:5432" # هنا 5433 للجهاز و 5432 للحاوية
+      - "5433:5432" 
     healthcheck:
-      # ملاحظة: داخل الحاوية نستخدم دائماً 5432 وليس 5433
       test: ["CMD-SHELL", "pg_isready -U postgres -d lms"]
       interval: 5s
       timeout: 5s
@@ -18,7 +17,7 @@ services:
 
   backend:
     build:
-      context: ./backend # الكونتكست داخل مجلد الباك اند مباشرة
+      context: ./backend 
       dockerfile: Dockerfile
     depends_on:
       db:
@@ -28,7 +27,7 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@db:5432/lms
       POSTGRES_SERVER: db
-      PYTHONPATH: /app # لكي يرى الكود الموديلات بشكل صحيح
+      PYTHONPATH: /app 
       SECRET_KEY: ${SECRET_KEY}
       ACCESS_TOKEN_EXPIRE_MINUTES: 30
       REFRESH_TOKEN_EXPIRE_DAYS: 7
@@ -47,14 +46,14 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: dev # استهداف مرحلة التطوير لتفعيل التحديث التلقائي (HMR)
+      target: dev 
     ports:
       - "5173:5173"
     environment:
       - VITE_API_URL=http://localhost:8000
     volumes:
       - ./frontend:/app
-      - /app/node_modules # لمنع الكتابة فوق موديولات النود داخل الحاوية
+      - /app/node_modules 
 
 volumes:
   lms_postgres_data:

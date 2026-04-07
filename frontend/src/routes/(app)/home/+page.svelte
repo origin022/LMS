@@ -45,7 +45,7 @@
       <div class="flex justify-between items-center mb-8">
           <h3 class="text-2xl font-black text-gray-800">آخر المحاضرات المضافة</h3>
           <button on:click={() => goto('/classrooms')} class="text-blue-600 font-black text-sm hover:underline">
-              الذهاب إلى الكلاسات ←
+              الذهاب إلى المجالات ←
           </button>
       </div>
 

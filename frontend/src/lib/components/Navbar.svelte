@@ -16,7 +16,7 @@
     </button>
 
     <div class="hidden md:block text-right">
-        <h1 class="text-lg font-black text-gray-900 tracking-tight">المنصة الذكية</h1>
+        <h1 class="text-lg font-black text-gray-900 tracking-tight">منصة الجاحظ</h1>
         <p class="text-[9px] text-gray-400 font-bold uppercase tracking-widest -mt-1">نظام التعلم الذكي</p>
     </div>
   </div>

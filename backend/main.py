@@ -12,9 +12,11 @@ from src.routers import student as student_router
 from src.routers import donation as donation_router
 from src.models.Quiz_Attempt import Quiz_Attempt
 from fastapi.middleware.cors import CORSMiddleware
-
+from src.core.security import limiter
 from src.core.config import config
-
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from src.core.security import _rate_limit_exceeded_handler
 Quiz_Attempt.model_rebuild()
 
 
@@ -23,9 +25,11 @@ app = FastAPI(
     version="1.0.0",
     description="API for Learning Management System",
 
-
-
 )
+app.state.limiter = limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[

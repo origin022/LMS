@@ -2,6 +2,7 @@ from typing import AsyncGenerator
 from fastapi import  HTTPException, status
 from sqlmodel.ext.asyncio.session import AsyncSession    
 from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.exc import SQLAlchemyError
 
 from src.core.config import config 
    
@@ -17,7 +18,7 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
             yield session
     except HTTPException:
         raise
-    except Exception as e:
+    except SQLAlchemyError as e:
         import traceback
         traceback.print_exc()
         print(f"Database error during session: {e}")
@@ -25,4 +26,8 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database service is temporarily unavailable."
         )
+    except Exception:
+        # Re-raise any other exceptions (like RateLimitExceeded) 
+        # so they can be handled by their specific handlers
+        raise
 

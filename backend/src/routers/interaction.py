@@ -4,27 +4,34 @@ from src.core.dep import get_session
 from src.core.auth import PermissionChecker, get_current_user
 from src.schemas.interaction import CommentCreate, CommentUpdate, Commentred, LikeToggle, CommentResponse
 from src.services.interaction import InteractionS as service
+from src.core.security import limiter, SENSITIVE_LIMIT, DEFAULT_LIMIT
+from fastapi import WebSocket, WebSocketDisconnect
+from src.core.wepsocket import manager
 from src.models.User import User
 from typing import List
+import asyncio
 
 router = APIRouter(prefix="/interactions", tags=["Interactions"])
 
-@router.post("/lectures/{lecture_id}/comments", status_code=status.HTTP_201_CREATED , response_model=Commentred)
+@router.post("/lectures/{lecture_id}/comments", status_code=status.HTTP_201_CREATED, response_model=Commentred)
+@limiter.limit(SENSITIVE_LIMIT)
 async def create_comment(
+    lecture_id: int, 
     data: CommentCreate, 
     request: Request,
     db: AsyncSession = Depends(get_session),
     current_user: User = Depends(PermissionChecker(["Comment"])) 
 ):
     c = await service.add_comment(db, data, current_user)
+    
     pic_url = None
     if c.user and c.user.profile and c.user.profile.profile_picture_data:
         pic_url = f"{request.base_url}api/v1/users/{c.user_id}/picture"
     
-    return {
+    comment_payload = {
         "comment_id": c.comment_id,
         "text": c.text,
-        "submission_time": c.submission_time,
+        "submission_time": c.submission_time.isoformat() if hasattr(c.submission_time, 'isoformat') else str(c.submission_time),
         "user_id": c.user_id,
         "user": {
             "name": c.user.name,
@@ -32,7 +39,12 @@ async def create_comment(
         }
     }
 
+    asyncio.create_task(
+        manager.broadcast_to_lecture(lecture_id, comment_payload)
+    )       
+    return comment_payload
 @router.get("/lectures/{lecture_id}/comments", response_model=List[Commentred])
+@limiter.limit(DEFAULT_LIMIT)
 async def get_comments(
     lecture_id: int,
     request: Request,
@@ -59,7 +71,9 @@ async def get_comments(
     return result
 
 @router.post("/lectures/{lecture_id}/like" , response_model=LikeToggle)
+@limiter.limit(SENSITIVE_LIMIT)
 async def like_lecture(
+    request: Request,
     lecture_id: int, 
     db: AsyncSession = Depends(get_session),
     current_user: User = Depends(PermissionChecker(["Like"]))
@@ -70,8 +84,9 @@ async def like_lecture(
 
 
 @router.patch("/comment/{comment_id}", response_model=CommentUpdate)
-
+@limiter.limit(SENSITIVE_LIMIT)
 async def update_comment(
+    request: Request,
     comment_id: int,
     data: CommentUpdate,
     db: AsyncSession = Depends(get_session),
@@ -83,3 +98,17 @@ async def update_comment(
         current_user=current_user,
         data=data
     )
+
+
+
+
+import asyncio
+
+@router.websocket("/ws/{lecture_id}")
+async def lecture_comments_websocket(websocket: WebSocket, lecture_id: int):
+    await manager.connect(websocket, lecture_id)
+    try:
+        while True:
+            await asyncio.sleep(30)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, lecture_id)

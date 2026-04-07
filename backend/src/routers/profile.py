@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response, Request
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.core.auth import PermissionChecker, get_current_user
 from src.core.dep import get_session
 from src.schemas.profile import ReadProfile, UpdateProfile , ProfileUpdateResponse
 from src.services.profile import ProfileService
 from src.models.User import User
+from src.core.security import limiter, SENSITIVE_LIMIT, DEFAULT_LIMIT, HEAVY_LIMIT
 
 allow_profile = PermissionChecker(["Manage Profile"])
 
@@ -12,7 +13,9 @@ router = APIRouter()
 
 
 @router.get("/profile")
+@limiter.limit(DEFAULT_LIMIT)
 async def get_my_profile(
+    request: Request,
     db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
@@ -35,7 +38,9 @@ async def get_my_profile(
     response_model=ProfileUpdateResponse,
     dependencies=[Depends(allow_profile)]
 )
+@limiter.limit(SENSITIVE_LIMIT)
 async def update_profile(
+    request: Request,
     data: UpdateProfile,
     db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user)
@@ -63,7 +68,9 @@ async def update_profile(
     "/profile/picture",
     dependencies=[Depends(allow_profile)]
 )
+@limiter.limit(HEAVY_LIMIT)
 async def upload_picture(
+    request: Request,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user)
@@ -86,7 +93,9 @@ async def upload_picture(
 
 
 @router.get("/picture/me")
+@limiter.limit(HEAVY_LIMIT)
 async def get_my_profile_picture(
+    request: Request,
     db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):

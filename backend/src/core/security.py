@@ -5,6 +5,28 @@ from passlib.context import CryptContext
 from fastapi import HTTPException, status
 from .config import config
 from sqlalchemy import select
+from fastapi import Request
+from fastapi.responses import JSONResponse
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from fastapi import Response
+
+
+limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
+
+# Rate limit constants
+AUTH_LIMIT = "5/minute"
+SENSITIVE_LIMIT = "10/minute"
+PUBLIC_LIMIT = "60/minute"
+HEAVY_LIMIT = "20/minute"
+DEFAULT_LIMIT = "100/minute"
+
+async def _rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> Response:
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "لقد تجاوزت الحد المسموح به من الطلبات. يرجى المحاولة لاحقاً."},
+    )
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 

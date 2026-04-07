@@ -2,14 +2,16 @@ from fastapi import APIRouter, Depends, Response, Request, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.core.dep import get_session
-from src.core.security import create_access_token, create_refresh_token, decode_token
+from src.core.security import create_access_token, create_refresh_token, decode_token, limiter, AUTH_LIMIT, SENSITIVE_LIMIT
 from src.services.login import authenticate_user, set_auth_cookies
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @router.post("/login")
+@limiter.limit(AUTH_LIMIT)
 async def login(
+    request: Request,
     response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_session)
@@ -34,6 +36,7 @@ async def login(
 
 
 @router.post("/refresh")
+@limiter.limit(SENSITIVE_LIMIT)
 async def refresh(
     request: Request,
     response: Response

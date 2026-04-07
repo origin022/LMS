@@ -125,8 +125,8 @@
         const res = await apiFetch(`/courses/${classId}`);
         if (res.ok) {
           const data = await res.json();
-          pageTitle = "كورسات الكلاس";
-          pageSubtitle = "تصفح الكورسات المتاحة في هذا الكلاس";
+          pageTitle = "كورسات المجال";
+          pageSubtitle = "تصفح الكورسات المتاحة في هذا المجال";
           courses = data.course || [];
         }
       } else if (lectureMode && courseId) {
