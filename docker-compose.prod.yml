@@ -50,8 +50,8 @@ services:
       dockerfile: Dockerfile
       target: production
       args:
-        - VITE_API_BASE_URL=${VITE_API_BASE_URL}
-        - VITE_API_URL=${VITE_API_URL}
+        - VITE_API_BASE_URL=https://lms-backend-t7q6.onrender.com/api/v1
+        - VITE_API_URL=https://lms-backend-t7q6.onrender.com
     ports:
       - "80:80"
     restart: always

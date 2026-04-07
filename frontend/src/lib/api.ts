@@ -1,5 +1,5 @@
-export const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
-export const FILE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000/').replace(/\/$/, '') + '/';
+export const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://lms-backend-t7q6.onrender.com/api/v1';
+export const FILE_URL = (import.meta.env.VITE_API_URL || 'https://lms-backend-t7q6.onrender.com/').replace(/\/$/, '') + '/';
 
 
 export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
