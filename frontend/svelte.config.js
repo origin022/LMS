@@ -1,18 +1,13 @@
-import adapter from '@sveltejs/adapter-static';
-import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
+import adapter from '@sveltejs/adapter-static'; // غيره من auto إلى static
 
-/** @type {import('@sveltejs/kit').Config} */
-const config = {
-    preprocess: vitePreprocess(),
-    kit: {
-        adapter: adapter({
-            pages: 'build',
-            assets: 'build',
-            fallback: 'index.html', 
-            precompress: false,
-            strict: true
-        })
-    }
+export default {
+	kit: {
+		adapter: adapter({
+			pages: 'build',  // هذا المجلد الذي ينسخه الدوكر
+			assets: 'build',
+			fallback: 'index.html', // ضروري جداً للـ SPA
+			precompress: false,
+			strict: true
+		})
+	}
 };
-
-export default config;
