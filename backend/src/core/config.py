@@ -25,18 +25,30 @@ class Config(BaseSettings):
     GROQ_API_KEY: str
  
  
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str 
-    POSTGRES_SERVER: str
-    POSTGRES_PORT: int
-    POSTGRES_DB: str
+    POSTGRES_USER: str | None = None
+    POSTGRES_PASSWORD: str | None = None
+    POSTGRES_SERVER: str | None = None
+    POSTGRES_PORT: int | None = None
+    POSTGRES_DB: str | None = None
+    DATABASE_URL: str | None = None
 
     @property
-    def SQLALCHEMY_DATABASE_URI(self) -> str: # حولها إلى str لسهولة التعامل
+    def SQLALCHEMY_DATABASE_URI(self) -> str:
+        if self.DATABASE_URL:
+            db_url: str = self.DATABASE_URL
+            url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
+            if "postgresql://" in url and "asyncpg" not in url:
+                url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            return url
+        
+        # Fallback to reconstructing from components if no DATABASE_URL
         return (
             f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
             f"{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
+
+    API_URL: str = "http://localhost:8000"
+    FRONTEND_URL: str = "http://localhost:5173"
 
     BACKEND_CORS_ORIGINS: List[AnyUrl] = []
 

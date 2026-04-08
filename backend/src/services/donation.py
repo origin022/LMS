@@ -4,6 +4,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.models.Donation import Donation, PaymentStatus
 from jose import jwt, JWTError
+from src.core.config import config
 import time
 import asyncio
 
@@ -88,8 +89,8 @@ class DonationService:
             "serviceType": "Delivery",
 
             "redirectUrls": {
-                "successUrl": "http://127.0.0.1:8000/api/v1/donations/callback",
-                "failureUrl": "http://127.0.0.1:8000/api/v1/donations/callback"
+                "successUrl": f"{config.API_URL}/api/v1/donations/callback",
+                "failureUrl": f"{config.API_URL}/api/v1/donations/callback"
             }
         }
 

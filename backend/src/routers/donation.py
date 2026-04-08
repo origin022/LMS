@@ -5,6 +5,7 @@ from src.schemas.donation import DonationCreate, DonationResponse
 from src.services.donation import DonationService
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.core.security import limiter, SENSITIVE_LIMIT, DEFAULT_LIMIT
+from src.core.config import config
 
 router = APIRouter(prefix="/donations", tags=["Donations"])
 
@@ -18,5 +19,5 @@ async def start_donation(request: Request, data: DonationCreate, db: AsyncSessio
 async def payment_callback(request: Request, token: str, db: AsyncSession = Depends(get_session)):
     result = await DonationService.verify_zaincash_callback(token, db)
     return RedirectResponse(
-        url=f"http://localhost:5173/payment-status?status={result['status']}&donation_id={result['donation_id']}"
+        url=f"{config.FRONTEND_URL}/payment-status?status={result['status']}&donation_id={result['donation_id']}"
     )

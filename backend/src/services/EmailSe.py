@@ -21,7 +21,7 @@ class EmailService:
     @staticmethod
     async def send_universal_mail(to_email: str, token: str, subject: str, template: str, route: str):
         EmailService._setup_gmail()
-        magic_link = f"http://localhost:8000/api/v1/{route}?token={token}"
+        magic_link = f"{config.API_URL}/api/v1/{route}?token={token}"
         
         gmail.send(
             subject=subject,
