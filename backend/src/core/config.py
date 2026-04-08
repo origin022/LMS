@@ -25,27 +25,21 @@ class Config(BaseSettings):
     GROQ_API_KEY: str
  
  
-    POSTGRES_USER: str | None = None
-    POSTGRES_PASSWORD: str | None = None
-    POSTGRES_SERVER: str | None = None
-    POSTGRES_PORT: int | None = None
-    POSTGRES_DB: str | None = None
-    DATABASE_URL: str | None = None
+    # Database settings - Uses single DATABASE_URL variable
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:12345@localhost:5432/lms"
 
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
-        if self.DATABASE_URL:
-            db_url: str = self.DATABASE_URL
-            url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
-            if "postgresql://" in url and "asyncpg" not in url:
-                url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
-            return url
+        # Pydantic reads DATABASE_URL from environment or .env
+        url = self.DATABASE_URL
         
-        # Fallback to reconstructing from components if no DATABASE_URL
-        return (
-            f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
-            f"{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-        )
+        # Ensure correct prefix for asyncpg
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgresql://") and "+asyncpg" not in url:
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        
+        return url
 
     API_URL: str = "http://localhost:8000"
     FRONTEND_URL: str = "http://localhost:5173"
