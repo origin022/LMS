@@ -36,17 +36,20 @@ from src.models.VerificationTok import VerificationToken
 from src.models.Student_Mastery import Student_Mastery
 from src.models.Donation import Donation
 
-config = context.config
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+from src.core.config import config as app_config
+
+# Alembic Config object
+alembic_config = context.config
+if alembic_config.config_file_name is not None:
+    fileConfig(alembic_config.config_file_name)
 
 target_metadata = SQLModel.metadata
 
-DATABASE_URL = "postgresql+asyncpg://postgres:12345@db:5432/lms"
-config.set_main_option("sqlalchemy.url", DATABASE_URL)
+# Use the dynamic URI from our app config
+alembic_config.set_main_option("sqlalchemy.url", str(app_config.SQLALCHEMY_DATABASE_URI))
 
 def run_migrations_offline() -> None:
-    url = config.get_main_option("sqlalchemy.url")
+    url = alembic_config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -66,7 +69,7 @@ def do_run_migrations(connection: Connection):
 
 async def run_async_migrations():
     connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section),
+        alembic_config.get_section(alembic_config.config_ini_section),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

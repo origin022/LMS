@@ -46,6 +46,11 @@ class Config(BaseSettings):
 
     BACKEND_CORS_ORIGINS: List[AnyUrl] = []
 
+    # ZainCash Settings
+    ZAINCASH_CLIENT_ID: str = "758055f4a8044779a35f6ceb69f858b3"
+    ZAINCASH_CLIENT_SECRET: str = "bibLCGTxVAig5To3OLLKPJQMlRR7Pefp"
+    ZAINCASH_BASE_URL: str = "https://pg-api-uat.zaincash.iq"
+
     MAIL_USERNAME: str 
     MAIL_PASSWORD: str 
     MAIL_FROM: str

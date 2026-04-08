@@ -8,14 +8,10 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from main import app
 from src.core.dep import get_session
-from src.core.config import config
-import os
+from src.core.config import config as app_config
 
-# استخدام رابط قاعدة البيانات من المتغيرات البيئية أو المتغير الافتراضي
-database_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:12345@localhost:5433/lms")
-# استبدال postgresql:// بـ postgresql+asyncpg:// إذا لزم الأمر في التست
-if database_url.startswith("postgresql://"):
-    database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+# Use SQLALCHEMY_DATABASE_URI from app config
+database_url = str(app_config.SQLALCHEMY_DATABASE_URI)
 
 engine = create_async_engine(database_url)
 async_session_maker = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)

@@ -11,9 +11,9 @@ import asyncio
 
 class DonationService:
 
-    CLIENT_ID = "758055f4a8044779a35f6ceb69f858b3"
-    CLIENT_SECRET = "bibLCGTxVAig5To3OLLKPJQMlRR7Pefp"
-    BASE_URL = "https://pg-api-uat.zaincash.iq"
+    CLIENT_ID = config.ZAINCASH_CLIENT_ID
+    CLIENT_SECRET = config.ZAINCASH_CLIENT_SECRET
+    BASE_URL = config.ZAINCASH_BASE_URL
 
     _cached_token = None
     _token_expires_at = 0
