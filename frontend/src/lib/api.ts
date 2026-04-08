@@ -4,6 +4,10 @@ export const FILE_URL = (import.meta.env.VITE_API_URL || 'https://lms-backend-t7
 
 export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
     const token = localStorage.getItem("token");
+    const defaultOptions = {
+    ...options,
+    credentials: 'include', 
+  };
 
     const headers: Record<string, string> = {
         'Accept': 'application/json',
