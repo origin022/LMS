@@ -59,7 +59,7 @@ def set_auth_cookies(response: Response, access: str, refresh: str):
         key="refresh_token",
         value=refresh,
         httponly=True,
-        samesite="lax",
-        secure=False,
+        samesite="none",
+        secure=True,
         path="/"
     )

@@ -374,7 +374,7 @@ class TeacherService:
         if not file.content_type.startswith("video/"):
             raise HTTPException(status_code=400, detail="الملف المرفوع يجب أن يكون فيديو فقط")
 
-        upload_dir = "/app/media/lectures"
+        upload_dir = os.path.join("media", "lectures")
         os.makedirs(upload_dir, exist_ok=True) 
 
         file_ext = os.path.splitext(file.filename)[1]
@@ -606,6 +606,8 @@ class TeacherService:
             await db.rollback()
             raise HTTPException(status_code=500, detail=f"خطأ في الحفظ: {str(e)}")
 
+    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+
     @staticmethod
     async def upload_course_thumbnail(db: AsyncSession, course_id: int, file: UploadFile, current_user: User):
         course = await get_owned_obj(db, Course, course_id, current_user, user_field="user_id")
@@ -613,15 +615,20 @@ class TeacherService:
         if not file.content_type.startswith("image/"):
             raise HTTPException(status_code=400, detail="الملف المرفوع يجب أن يكون صورة فقط")
 
-        upload_dir = "media/thum"
+        upload_dir = os.path.join("media", "thum")
         os.makedirs(upload_dir, exist_ok=True)
 
-        extension = file.filename.split(".")[-1]
+        extension = file.filename.split(".")[-1].lower()
         file_name = f"crs_{course_id}_{uuid.uuid4().hex}.{extension}"
         file_path = os.path.join(upload_dir, file_name)
+        db_file_path = file_path.replace("\\", "/")
 
         try:
             content = await file.read()
+
+            if len(content) > TeacherService.MAX_FILE_SIZE:
+                raise HTTPException(status_code=413, detail="حجم الصورة يتجاوز الحد المسموح (5MB)")
+
             with open(file_path, "wb") as f:
                 f.write(content)
             
@@ -629,10 +636,12 @@ class TeacherService:
                 try: os.remove(course.course_thumbnail)
                 except: pass
             
-            course.course_thumbnail = file_path.replace("\\", "/")
+            course.course_thumbnail = db_file_path
             await db.commit()
             await db.refresh(course)
-            return {"message": "تم رفع الصورة بنجاح", "image_url": file_path}
+            return {"message": "تم رفع الصورة بنجاح", "image_url": db_file_path}
+        except HTTPException:
+            raise
         except Exception as e:
             await db.rollback()
             raise HTTPException(status_code=500, detail=str(e))
@@ -644,15 +653,20 @@ class TeacherService:
         if not file.content_type.startswith("image/"):
             raise HTTPException(status_code=400, detail="الملف المرفوع يجب أن يكون صورة فقط")
 
-        upload_dir = "media/thum"
+        upload_dir = os.path.join("media", "thum")
         os.makedirs(upload_dir, exist_ok=True)
 
-        extension = file.filename.split(".")[-1]
+        extension = file.filename.split(".")[-1].lower()
         file_name = f"lec_{lecture_id}_{uuid.uuid4().hex}.{extension}"
         file_path = os.path.join(upload_dir, file_name)
+        db_file_path = file_path.replace("\\", "/")
 
         try:
             content = await file.read()
+
+            if len(content) > TeacherService.MAX_FILE_SIZE:
+                raise HTTPException(status_code=413, detail="حجم الصورة يتجاوز الحد المسموح (5MB)")
+
             with open(file_path, "wb") as f:
                 f.write(content)
 
@@ -660,10 +674,12 @@ class TeacherService:
                 try: os.remove(lecture.lecture_image)
                 except: pass
 
-            lecture.lecture_image = file_path.replace("\\", "/")
+            lecture.lecture_image = db_file_path
             await db.commit()
             await db.refresh(lecture)
-            return {"message": "تم رفع الصورة بنجاح", "image_url": file_path}
+            return {"message": "تم رفع الصورة بنجاح", "image_url": db_file_path}
+        except HTTPException:
+            raise
         except Exception as e:
             await db.rollback()
             raise HTTPException(status_code=500, detail=str(e))

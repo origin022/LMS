@@ -180,7 +180,8 @@ async def delete_quiz(
 async def complete_teacher_setup(
     request: Request,
     data: AssignClassSchema,
-    db: AsyncSession = Depends(get_session)
+    db: AsyncSession = Depends(get_session),
+    current_user = Depends(PermissionChecker(["manage corse"]))
 ):
     return await TeacherService.assign_teacher_to_class(
         user_id=data.user_id, 
@@ -212,7 +213,7 @@ async def upload_lecture_video(
     background_tasks.add_task(
     TeacherService.process_video_transcription,
     lecture_id,
-    f"/app/{media_record.file_path}"
+    media_record.file_path
     )
 
     return {"message": "الفديو تم رفعه بنجاح."}

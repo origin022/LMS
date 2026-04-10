@@ -20,7 +20,8 @@ import uuid
 
 
 class AdminService:
-    UPLOAD_DIR = "media/thum"
+    UPLOAD_DIR = os.path.join("media", "thum")
+    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
     @staticmethod
     async def create_classroom(db: AsyncSession, data: ClassroomCreate):
         new_class = Classroom(class_name=data.name)
@@ -40,11 +41,13 @@ class AdminService:
             raise HTTPException(status_code=404, detail="الكلاس غير موجود")
 
         try:
-        # 1. التحقق من الحجم قبل القراءة الكاملة (اختياري لكن أفضل)
             content = await file.read()
 
-        # 2. إنشاء اسم فريد للملف لتجنب تكرار الأسماء
-            extension = file.filename.split(".")[-1]
+            # التحقق من حجم الملف
+            if len(content) > AdminService.MAX_FILE_SIZE:
+                raise HTTPException(status_code=413, detail="حجم الصورة يتجاوز الحد المسموح (5MB)")
+
+            extension = file.filename.split(".")[-1].lower()
             file_name = f"cls_{classroom_id}_{uuid.uuid4().hex}.{extension}"
             
             os.makedirs(AdminService.UPLOAD_DIR, exist_ok=True)
