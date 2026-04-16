@@ -36,9 +36,12 @@
   let lectureDescription = "";
   let selectedCourseId = "";
   let videoFile: File | null = null;
+  let documentFile: File | null = null;
   let lectureImageFile: File | null = null;
   let courseImageFile: File | null = null;
   let publishing = false;
+  let generateQuizWithAI = false;
+  let quizSource: "video" | "document" = "video";
 
   let message = { text: "", type: "" };
 
@@ -113,6 +116,10 @@
     if (!lectureTitle || !selectedCourseId) {
       return showMsg("يرجى إدخال عنوان المحاضرة واختيار الكورس", "error");
     }
+    if (!videoFile) {
+      showMsg("يجب اختيار فيديو للمحاضرة أولاً", "error");
+      return;
+    }
     publishing = true;
     try {
       const res = await apiFetch(
@@ -160,11 +167,56 @@
         }
       }
 
-      showMsg("تم نشر المحاضرة بنجاح ✅");
+      if (documentFile) {
+        const formData = new FormData();
+        formData.append("file", documentFile);
+        const docUploadRes = await apiFetch(
+          `/lectures/${lecture.lecture_id}/upload-document`,
+          {
+            method: "POST",
+            body: formData,
+            headers: {},
+          },
+        );
+        if (!docUploadRes.ok) {
+          showMsg("تم نشر المحاضرة وفيديوها لكن فشل رفع المستند", "error");
+          publishing = false;
+          return;
+        }
+      }
+
+      // Automatically trigger AI Quiz generation if user opted in
+      if (generateQuizWithAI) {
+        try {
+          const quizRes = await apiFetch("/generate-ai", {
+            method: "POST",
+            body: JSON.stringify({
+              title: `كويز: ${lectureTitle}`,
+              lecture_id: lecture.lecture_id,
+              quiz_id: 0,
+              source: documentFile ? quizSource : "video"
+            }),
+          });
+          
+          if (!quizRes.ok) {
+            const quizErr = await quizRes.json().catch(() => ({}));
+            showMsg(`تم نشر المحاضرة بنجاح، لكن: ${quizErr.detail || "تعذر توليد الكويز تلقائياً"}`, "error");
+            // We don't return here because the lecture itself IS published successfully
+          } else {
+            showMsg("تم نشر المحاضرة وتوليد الكويز بنجاح ✅");
+          }
+        } catch (e) {
+          console.error("Quiz Gen Error:", e);
+          showMsg("المحاضرة نُشرت لكن حدث خطأ أثناء طلب توليد الكويز", "error");
+        }
+      } else {
+        showMsg("تم نشر المحاضرة بنجاح ✅");
+      }
       lectureTitle = "";
       lectureDescription = "";
       selectedCourseId = "";
       videoFile = null;
+      documentFile = null;
       lectureImageFile = null;
     } catch (e) {
       showMsg("حدث خطأ غير متوقع", "error");
@@ -374,7 +426,7 @@
 
           <div class="space-y-2">
             <p class="text-xs font-black text-slate-500">
-              فيديو المحاضرة (اختياري)
+              فيديو المحاضرة (إجباري)
             </p>
             <label
               for="inp-video"
@@ -413,6 +465,44 @@
             {/if}
           </div>
 
+          <div class="space-y-2">
+            <p class="text-xs font-black text-slate-500">
+              ملخص أو مستند PDF (اختياري)
+            </p>
+            <label
+              for="inp-doc"
+              class="flex flex-col items-center justify-center w-full h-24 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-all"
+            >
+              {#if documentFile}
+                <span class="text-sm font-black text-blue-600"
+                  >{documentFile.name}</span
+                >
+              {:else}
+                <span class="text-xl mb-1">📄</span>
+                <span class="text-xs font-black text-slate-400"
+                  >اضغط لاختيار ملف PDF</span
+                >
+              {/if}
+              <input
+                id="inp-doc"
+                type="file"
+                accept="application/pdf"
+                class="hidden"
+                on:change={(e) => {
+                  documentFile = e.currentTarget.files?.[0] ?? null;
+                }}
+              />
+            </label>
+            {#if documentFile}
+              <button
+                on:click={() => (documentFile = null)}
+                class="text-[10px] font-black text-red-400 hover:underline"
+              >
+                إزالة المستند
+              </button>
+            {/if}
+          </div>
+
           <button
             on:click={publishLecture}
             disabled={publishing || myCourses.length === 0}
@@ -420,6 +510,41 @@
           >
             {publishing ? "جارٍ النشر..." : "نشر المحاضرة"}
           </button>
+
+          <div class="flex items-center gap-3 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm mt-4">
+            <input
+              id="ai-quiz"
+              type="checkbox"
+              bind:checked={generateQuizWithAI}
+              class="w-5 h-5 accent-blue-600 rounded-lg cursor-pointer"
+            />
+            <label for="ai-quiz" class="flex flex-col cursor-pointer">
+              <span class="text-sm font-black text-slate-700">توليد كويز تلقائي بالذكاء الاصطناعي</span>
+              <span class="text-[10px] text-slate-400 font-bold">سيتم إنشاء 15 سؤالاً فور النشر</span>
+            </label>
+          </div>
+
+          {#if generateQuizWithAI && documentFile}
+            <div class="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 flex flex-col gap-3">
+              <p class="text-[10px] font-black text-blue-600">اختر مصدر توليد الأسئلة:</p>
+              <div class="flex gap-4">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="source" value="video" bind:group={quizSource} class="accent-blue-600" />
+                  <span class="text-xs font-bold text-slate-600">🎥 صوت المحاضرة</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="source" value="document" bind:group={quizSource} class="accent-blue-600" />
+                  <span class="text-xs font-bold text-slate-600">📄 وثائق المحاضرة (PDF)</span>
+                </label>
+              </div>
+            </div>
+          {:else}
+              {#if generateQuizWithAI}
+                <p class="text-[10px] font-black text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-100 italic">
+                  ⚠️ سيتم توليد الكويز من صوت المحاضرة تلقائياً لعدم وجود ملف PDF
+                </p>
+              {/if}
+          {/if}
         </div>
       </div>
     {/if}

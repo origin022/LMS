@@ -36,7 +36,7 @@
     is_liked: boolean;
     quiz_id?: number; 
     course_id?: number; 
-    media?: { file_path: string; mime_type: string }[];
+    media?: { file_path: string; mime_type: string; file_name: string }[];
   }
 
   let lecture: Lecture | null = null;
@@ -449,6 +449,20 @@ $: if (Math.floor(currentTime) !== lastTime) {
     <span class="font-black text-sm">اختبار</span>
   </button>
 {/if}
+          
+          {#each lecture.media?.filter(m => m.mime_type === 'application/pdf' || m.file_path.endsWith('.pdf')) || [] as doc}
+            <a
+              href={`${FILE_URL}${doc.file_path}`}
+              target="_blank"
+              class="self-start group flex items-center gap-4 bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-4 rounded-3xl transition-all active:scale-95 shadow-lg shadow-emerald-600/20"
+            >
+              <FileText size={20} />
+              <div class="flex flex-col items-start text-right">
+                <span class="font-black text-sm">تحميل الملف</span>
+                <span class="text-[10px] opacity-70 truncate max-w-[150px]">{doc.file_name}</span>
+              </div>
+            </a>
+          {/each}
         </div>
 
         <div

@@ -30,6 +30,13 @@
   interface Classroom {
     class_id: number;
     class_name: string;
+    department_id?: number;
+    department_name?: string;
+  }
+
+  interface Department {
+    department_id: number;
+    name: string;
   }
 
   let activeTab: "classrooms" | "users" | "invites" | "roles" = "classrooms";
@@ -37,6 +44,7 @@
   let loading = false;
 
   let classrooms: Classroom[] = [];
+  let departments: Department[] = [];
   let users: UserAdmin[] = [];
   let roles: Role[] = [];
   let permissions: Permission[] = [];
@@ -44,8 +52,11 @@
   let searchQuery = "";
   let filterRoleId = "";
   let filterStateId = "";
+  let filterClassDeptId = "";
 
   let newClassName = "";
+  let selectedDeptId: string = "";
+  let newDeptName = "";
   let inviteEmail = "";
   let selectedRoleId = "";
   let newRoleName = "";
@@ -63,11 +74,17 @@
     if (!silent) loading = true;
     try {
       if (activeTab === "classrooms") {
-        const res = await apiFetch("/classrooms");
-        if (res.ok) {
-          classrooms = (await res.json()).sort(
+        const [cRes, dRes] = await Promise.all([
+          apiFetch("/admin/classrooms/all"),
+          apiFetch("/admin/departments")
+        ]);
+        if (cRes.ok) {
+          classrooms = (await cRes.json()).sort(
             (a: any, b: any) => b.class_id - a.class_id,
           );
+        }
+        if (dRes.ok) {
+          departments = await dRes.json();
         }
       } else if (activeTab === "users") {
         const params = new URLSearchParams();
@@ -125,6 +142,12 @@
     filterRoleId = "4";
   }
 
+  $: filteredClassrooms = classrooms.filter((cls) => {
+    if (filterClassDeptId && cls.department_id !== parseInt(filterClassDeptId))
+      return false;
+    return true;
+  });
+
   onMount(loadData);
 
   async function changeUserRole(userId: number, roleId: string) {
@@ -140,28 +163,29 @@
   }
   let selectedFile: File | null = null;
   let fileInput: HTMLInputElement;
-
   async function createClass() {
     if (!newClassName) return showMsg("يرجى إدخال اسم المادة", "error");
-
-    loading = true; // تفعيل حالة التحميل
+    loading = true;
     try {
       const formData = new FormData();
       formData.append("name", newClassName);
+      if (selectedDeptId) {
+        formData.append("department_id", selectedDeptId);
+      }
       if (selectedFile) {
         formData.append("image", selectedFile);
       }
 
       const res = await apiFetch("/admin/classrooms", {
         method: "POST",
-        body: formData, // نرسل الـ FormData مباشرة
-        // ملاحظة: لا تضع headers يدوية هنا، المتصفح سيضع Content-Type تلقائياً
+        body: formData,
       });
 
       if (res.ok) {
         newClassName = "";
+        selectedDeptId = "";
         selectedFile = null;
-        if (fileInput) fileInput.value = ""; // تصفير حقل الملف
+        if (fileInput) fileInput.value = "";
         showMsg("تم إنشاء المجال بنجاح");
         loadData();
       } else {
@@ -172,6 +196,35 @@
       showMsg("حدث خطأ في الاتصال", "error");
     } finally {
       loading = false;
+    }
+  }
+
+  async function createDept() {
+    if (!newDeptName) return showMsg("يرجى إدخال اسم القسم", "error");
+    try {
+      const res = await apiFetch("/admin/departments", {
+        method: "POST",
+        body: JSON.stringify({ name: newDeptName }),
+      });
+      if (res.ok) {
+        newDeptName = "";
+        showMsg("تم إنشاء القسم بنجاح");
+        loadData();
+      }
+    } catch (e) {
+      showMsg("فشل إنشاء القسم", "error");
+    }
+  }
+
+  async function deleteDept(id: number) {
+    if (!confirm("هل أنت متأكد من حذف القسم؟ سيتم فك ارتباطه بالمجالات."))
+      return;
+    const res = await apiFetch(`/admin/departments/${id}`, {
+      method: "DELETE",
+    });
+    if (res.status === 204) {
+      showMsg("تم حذف القسم");
+      loadData();
     }
   }
 
@@ -352,6 +405,20 @@
     </div>
   {/if}
 
+  {#if activeTab === "classrooms"}
+    <div class="flex flex-wrap gap-3 items-center mb-6" in:fade>
+      <select
+        bind:value={filterClassDeptId}
+        class="bg-white border border-slate-100 px-4 py-2 rounded-xl text-[10px] font-black text-slate-500 outline-none"
+      >
+        <option value="">جميع الأقسام</option>
+        {#each departments as dept}
+          <option value={String(dept.department_id)}>{dept.name}</option>
+        {/each}
+      </select>
+    </div>
+  {/if}
+
   {#if loading}
     <div class="flex justify-center py-20">
       <div
@@ -377,6 +444,16 @@
               />
 
               <div class="relative">
+                <select
+                  bind:value={selectedDeptId}
+                  class="w-full p-5 bg-slate-50 border-none rounded-3xl outline-none font-bold focus:ring-2 focus:ring-blue-500/20 text-slate-500"
+                >
+                  <option value="">اختر القسم (اختياري)</option>
+                  {#each departments as dept}
+                    <option value={String(dept.department_id)}>{dept.name}</option>
+                  {/each}
+                </select>
+
                 <input
                   type="file"
                   accept="image/*"
@@ -435,20 +512,54 @@
             </div>
           </div>
 
-          <div class="space-y-4">
-            {#each classrooms as cls}
-              <div
-                class="bg-white p-6 rounded-[2.5rem] border border-slate-100 flex justify-between items-center group hover:border-blue-200 transition-all shadow-sm"
-              >
-                <div class="flex items-center gap-5">
-                  <div
-                    class="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center font-black uppercase text-[10px]"
+            <div class="space-y-4">
+              <div class="bg-blue-50 p-6 rounded-[2.5rem] mb-6">
+                <h4 class="text-sm font-black mb-4 text-blue-800">إدارة الأقسام</h4>
+                <div class="flex gap-2 mb-4">
+                  <input
+                    bind:value={newDeptName}
+                    placeholder="اسم قسم جديد (علمي...)"
+                    class="flex-1 px-4 py-2 rounded-xl text-xs font-bold outline-none border-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                  <button
+                    on:click={createDept}
+                    class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black shadow-md hover:bg-blue-700 transition-all"
                   >
-                    ID
-                  </div>
-                  <span class="font-black text-slate-700">{cls.class_name}</span
-                  >
+                    إضافة
+                  </button>
                 </div>
+                <div class="flex flex-wrap gap-2">
+                  {#each departments as dept}
+                    <div class="bg-white px-3 py-1.5 rounded-xl flex items-center gap-2 group border border-blue-100">
+                      <span class="text-[10px] font-black text-blue-600">{dept.name}</span>
+                      <button 
+                        on:click={() => deleteDept(dept.department_id)}
+                        class="text-slate-300 hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  {/each}
+                </div>
+              </div>
+
+              {#each filteredClassrooms as cls}
+                <div
+                  class="bg-white p-6 rounded-[2.5rem] border border-slate-100 flex justify-between items-center group hover:border-blue-200 transition-all shadow-sm"
+                >
+                  <div class="flex items-center gap-5">
+                    <div
+                      class="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center font-black uppercase text-[10px]"
+                    >
+                      ID
+                    </div>
+                    <div class="flex flex-col">
+                      <span class="font-black text-slate-700">{cls.class_name}</span>
+                      {#if cls.department_name}
+                        <span class="text-[9px] font-black text-blue-400">{cls.department_name}</span>
+                      {/if}
+                    </div>
+                  </div>
 
                 <button
                   on:click={() => deleteClass(cls.class_id)}

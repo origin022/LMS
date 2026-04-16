@@ -28,6 +28,12 @@ async def test_admin_operations(client: AsyncClient):
     assert (await client.post("/api/v1/admin/roles", json={"name": "Super"})).status_code in [201, 401, 422]
     assert (await client.get("/api/v1/admin/roles/invitable")).status_code in [200, 401]
     
+    # Department Management
+    assert (await client.get("/api/v1/admin/departments")).status_code in [200, 401]
+    assert (await client.post("/api/v1/admin/departments", json={"name": "New Dept"})).status_code in [201, 401, 422]
+    assert (await client.delete("/api/v1/admin/departments/1")).status_code in [200, 204, 401, 404]
+    assert (await client.get("/api/v1/admin/classrooms/all")).status_code in [200, 401]
+
     # Manager Invitation
     assert (await client.post("/api/v1/admin/managers/invite", json={"email": "m@test.com", "roles_id": 2})).status_code in [201, 401, 422]
     assert (await client.patch("/api/v1/admin/managers/1/deactivate")).status_code in [200, 401, 404]
@@ -50,16 +56,17 @@ async def test_manager_operations(client: AsyncClient):
 
 # --- 4. TEACHER OPERATIONS ---
 async def test_teacher_flow(client: AsyncClient):
-    assert (await client.post("/api/v1/teacher/courses", json={"title": "T", "classroom_id": 1})).status_code in [201, 401, 422]
+    assert (await client.post("/api/v1/teacher/courses", json={"name": "Science Course", "class_id": 1})).status_code in [201, 401, 422]
     assert (await client.patch("/api/v1/courses/1", json={"title": "Updated"})).status_code in [200, 401, 404]
     assert (await client.delete("/api/v1/teacher/courses/1")).status_code in [200, 401, 404]
-    assert (await client.post("/api/v1/teacher/courses/1/lectures", json={"title": "L1"})).status_code in [201, 401, 422]
+    assert (await client.post("/api/v1/teacher/courses/1/lectures", json={"title": "L1", "description": "D", "course_id": 1})).status_code in [201, 401, 422]
     assert (await client.patch("/api/v1/lectures/1", json={"title": "U"})).status_code in [200, 401, 404]
     assert (await client.delete("/api/v1/lectures/1")).status_code in [200, 401, 404]
     assert (await client.get("/api/v1/quizzes/1/questions")).status_code in [200, 401, 404]
-    assert (await client.post("/api/v1/generate-ai", json={"prompt": "test"})).status_code in [200, 401, 422]
-    assert (await client.post("/api/v1/complete-teacher-setup")).status_code in [200, 401, 422]
-    assert (await client.post("/api/v1/lectures/1/upload-video", files={"file": ("test.mp4", b"content")})).status_code in [200, 401, 422]
+    assert (await client.post("/api/v1/generate-ai", json={"lecture_id": 1, "title": "Q", "quiz_id": 0, "source": "video"})).status_code in [201, 401, 422, 400]
+    assert (await client.post("/api/v1/complete-teacher-setup", json={"class_id": 1, "user_id": 1})).status_code in [200, 401, 422]
+    assert (await client.post("/api/v1/lectures/1/upload-video", files={"file": ("test.mp4", b"content")})).status_code in [200, 201, 401, 422]
+    assert (await client.post("/api/v1/lectures/1/upload-document", files={"file": ("test.pdf", b"%PDF-1.4 content")})).status_code in [200, 201, 401, 422]
 
 # --- 5. STUDENT OPERATIONS ---
 async def test_student_flow(client: AsyncClient):

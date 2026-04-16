@@ -23,6 +23,7 @@
     text?: string | null;
     lecture_image?: string;
     quiz?: any[];
+    media?: { media_id: number; file_name: string; file_path: string; mime_type: string }[];
   }
 
   $: classId = $page.url.searchParams.get("class_id");
@@ -72,6 +73,7 @@
   let showQuizModal = false;
   let selectedLectureForQuiz: Lecture | null = null;
   let newQuizTitle = "";
+  let quizSource: "video" | "document" = "video";
 
 
 
@@ -303,15 +305,20 @@ function openQuizModal(lecture: Lecture, e: MouseEvent) {
     e.stopPropagation();
     
     // إذا كان هناك كويز فعلاً، نفتح واجهة التعديل مباشرة
-if (lecture.quiz_id){
-        const quizId = lecture.quiz_id; // نفترض أن الكويز الأول هو المطلوب
+    if (lecture.quiz_id){
+      const quizId = lecture.quiz_id; 
       manageQuiz(quizId, e);
       return;
     }
     
-    // إذا لم يوجد كويز، نفتح واجهة الإنشاء (الوضع الحالي لديك)
+    // إذا لم يوجد كويز، نفتح واجهة الإنشاء
     selectedLectureForQuiz = lecture;
-    newQuizTitle = "";
+    newQuizTitle = `كويز: ${lecture.title}`;
+    
+    // تحديد المصدر الافتراضي: إذا كان هناك ملف PDF، نجعله هو المختار افتراضياً
+    const hasPDF = lecture.media?.some(m => m.mime_type?.includes("pdf") || m.file_path?.toLowerCase().endsWith(".pdf"));
+    quizSource = hasPDF ? "document" : "video";
+    
     showQuizModal = true;
   }
 
@@ -326,7 +333,8 @@ if (lecture.quiz_id){
         body: JSON.stringify({
           lecture_id: selectedLectureForQuiz.lecture_id,
           title: newQuizTitle.trim(),
-          quiz_id: 0 
+          quiz_id: 0,
+          source: quizSource
         }),
       });
 
@@ -758,6 +766,26 @@ if (lecture.quiz_id){
             class="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none font-bold text-slate-700 focus:ring-2 focus:ring-blue-500/20"
           />
         </div>
+
+        {#if selectedLectureForQuiz?.media?.some(m => m.mime_type?.includes("pdf") || m.file_path?.toLowerCase().endsWith(".pdf"))}
+          <div class="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 flex flex-col gap-3">
+            <p class="text-[10px] font-black text-blue-600">اختر مصدر توليد الأسئلة:</p>
+            <div class="flex gap-4">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="source" value="video" bind:group={quizSource} class="accent-blue-600" />
+                <span class="text-xs font-bold text-slate-600">🎥 صوت المحاضرة</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="source" value="document" bind:group={quizSource} class="accent-blue-600" />
+                <span class="text-xs font-bold text-slate-600">📄 وثائق المحاضرة (PDF)</span>
+              </label>
+            </div>
+          </div>
+        {:else}
+          <p class="text-[10px] font-black text-amber-600 bg-amber-50 p-3 rounded-xl border border-amber-100 italic">
+            ⚠️ سيتم توليد الكويز من صوت المحاضرة لعدم وجود ملفات PDF مرفقة.
+          </p>
+        {/if}
       </div>
 
       <div class="flex gap-3 mt-8">

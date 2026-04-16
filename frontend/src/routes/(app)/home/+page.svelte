@@ -35,7 +35,7 @@
       <div class="relative z-10">
         <h2 class="text-4xl font-black mb-4" in:fly={{ y: 20 }}>مرحباً بك في منصة الجاحظ التعليمة</h2>
         <p class="text-blue-100 text-lg max-w-xl leading-relaxed font-medium">
-          استمتع بتجربة تعلم فريدة مع تقنيات الذكاء الاصطناعي  للأسئلة واختبار مستواك الدراسي.
+          وَالعَقلُ عِندي هُوَ النورُ الَّذي سَطَعت ... بِهِ الحَقيقَةُ في آفاقِ مَن نَظَرافَلا تَقُل بِما قالَ الرُواتُ بِلا ... عَقْلٍ يُبَيِّنُ هَل ذا قَولُ مَن بَصَرا؟
         </p>
       </div>
       <div class="absolute top-0 left-0 w-64 h-64 bg-white/10 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl" aria-hidden="true"></div>
@@ -45,7 +45,7 @@
       <div class="flex justify-between items-center mb-8">
           <h3 class="text-2xl font-black text-gray-800">آخر المحاضرات المضافة</h3>
           <button on:click={() => goto('/classrooms')} class="text-blue-600 font-black text-sm hover:underline">
-              الذهاب إلى المجالات ←
+              الذهاب إلى المجالات الدراسية ←
           </button>
       </div>
 

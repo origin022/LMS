@@ -8,11 +8,14 @@ from src.core.auth import PermissionChecker
 from src.schemas.admin import (
     ClassroomCreate, 
     ClassroomRead,
+    ClassroomWithDepartment,
     GetUsersResponse, 
     InvitationCreate, 
     InvitationResponse,
     RoleCreateWithPermissions,
-    RoleRead 
+    RoleRead,
+    DepartmentCreate,
+    DepartmentRead
 )
 from src.services.admin import AdminService
 from src.core.security import limiter, SENSITIVE_LIMIT, DEFAULT_LIMIT, HEAVY_LIMIT
@@ -35,10 +38,11 @@ async def create_new_classroom(
     request: Request,
     name: str = Form(..., min_length=3, max_length=20),
     image: UploadFile = File(None),
+    department_id: Optional[int] = Form(None),
     db: AsyncSession = Depends(get_session),
     current_user = Depends(check_add_class)
 ):
-    classroom_data = ClassroomCreate(name=name)
+    classroom_data = ClassroomCreate(name=name, department_id=department_id)
     new_class = await AdminService.create_classroom(db, classroom_data)
     
     if image and image.filename:
@@ -83,7 +87,8 @@ async def invite_new_manager(
         token=new_invitation.token,
         subject=" تم توجيه دعوة للانضمام كمدير",
         template="templates.html",
-        route="complete-register"
+        route="complete-register",
+        is_frontend=True
     )
     return {
         "message": "تم إنشاء الدعوة وجاري إرسال الإيميل في الخلفية",
@@ -173,3 +178,43 @@ async def update_classroom_thumbnail(
 
     # 2. إرسال الملف للسيرفس لمعالجته وحفظه في media/thum
     return await AdminService.upload_classroom_image(db, classroom_id, file)
+
+
+@router.get("/admin/departments", response_model=List[DepartmentRead])
+@limiter.limit(DEFAULT_LIMIT)
+async def get_departments(
+    request: Request,
+    db: AsyncSession = Depends(get_session),
+    current_user = Depends(check_add_class)
+):
+    return await AdminService.get_departments(db)
+
+@router.post("/admin/departments", response_model=DepartmentRead, status_code=status.HTTP_201_CREATED)
+@limiter.limit(SENSITIVE_LIMIT)
+async def create_department(
+    request: Request,
+    data: DepartmentCreate,
+    db: AsyncSession = Depends(get_session),
+    current_user = Depends(check_add_class)
+):
+    return await AdminService.create_department(db, data.name)
+
+@router.delete("/admin/departments/{department_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit(SENSITIVE_LIMIT)
+async def delete_department(
+    request: Request,
+    department_id: int,
+    db: AsyncSession = Depends(get_session),
+    current_user = Depends(check_add_class)
+):
+    await AdminService.delete_department(db, department_id)
+    return None
+
+@router.get("/admin/classrooms/all", response_model=List[ClassroomWithDepartment])
+@limiter.limit(DEFAULT_LIMIT)
+async def get_all_classrooms(
+    request: Request,
+    db: AsyncSession = Depends(get_session),
+    current_user = Depends(VIEW_USERS)
+):
+    return await AdminService.get_all_classrooms(db)

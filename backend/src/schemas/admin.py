@@ -6,13 +6,27 @@ from typing import List, Optional
 
 class ClassroomCreate(BaseModel):
     name: str = Field(..., min_length=3, max_length=20)
+    department_id: Optional[int] = None
+
+class DepartmentRead(BaseModel):
+    department_id: int
+    name: str
+
+    model_config = ConfigDict(from_attributes=True)
 
 class ClassroomRead(BaseModel):
     class_id: int
     class_name: str
     class_image: Optional[str] = None
+    department_id: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+class ClassroomWithDepartment(ClassroomRead):
+    department: Optional[DepartmentRead] = None
+
+class DepartmentCreate(BaseModel):
+    name: str
 
 
 

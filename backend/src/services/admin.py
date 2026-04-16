@@ -12,6 +12,7 @@ from datetime import datetime, timezone, timedelta
 from src.models.User import User
 from src.models.Course import Course
 from src.models.Teacher_Assignment import Teacher_Assignment
+from src.models.Department import Department
 from sqlalchemy.orm import selectinload
 from fastapi import UploadFile
 import os
@@ -24,11 +25,39 @@ class AdminService:
     MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
     @staticmethod
     async def create_classroom(db: AsyncSession, data: ClassroomCreate):
-        new_class = Classroom(class_name=data.name)
+        new_class = Classroom(
+            class_name=data.name,
+            department_id=data.department_id
+        )
         db.add(new_class)
         await db.commit()
         await db.refresh(new_class)
         return new_class
+
+    @staticmethod
+    async def create_department(db: AsyncSession, name: str):
+        department = Department(name=name)
+        db.add(department)
+        await db.commit()
+        await db.refresh(department)
+        return department
+
+    @staticmethod
+    async def get_departments(db: AsyncSession):
+        statement = select(Department)
+        result = await db.exec(statement)
+        return result.all()
+
+    @staticmethod
+    async def delete_department(db: AsyncSession, department_id: int):
+        statement = select(Department).where(Department.department_id == department_id)
+        result = await db.exec(statement)
+        department = result.first()
+        if not department:
+            raise HTTPException(status_code=404, detail="القسم غير موجود")
+        await db.delete(department)
+        await db.commit()
+        return {"message": "تم حذف القسم بنجاح"}
     
 
     @staticmethod
@@ -238,14 +267,21 @@ class AdminService:
        
     @staticmethod
     async def get_all_classrooms(db: AsyncSession):
-        statement = select(Classroom).options(selectinload(Classroom.course))
+        statement = select(Classroom).options(
+            selectinload(Classroom.course),
+            selectinload(Classroom.department)
+        )
         result = await db.exec(statement)
         classrooms = result.all()
         return classrooms
 
     @staticmethod
     async def get_invitable_roles(db: AsyncSession):
-        return (await db.exec(select(Roles).where(Roles.roles_id != 1, Roles.roles_id != 3))).all()
+        return (await db.exec(select(Roles).where(
+            Roles.roles_id != 1, 
+            Roles.roles_id != 3, 
+            Roles.roles_id != 4
+        ))).all()
     
 
 

@@ -204,11 +204,12 @@ async def upload_lecture_video(
     db: AsyncSession = Depends(get_session),
     current_user = Depends(PermissionChecker(["Publish"]))
 ):
-    media_record = await TeacherService.upload_lecture_video(
+    media_record = await TeacherService.upload_lecture_media(
         db=db, 
         lecture_id=lecture_id, 
         file=file,
-        current_user=current_user
+        current_user=current_user,
+        media_type="video"
     )
     background_tasks.add_task(
     TeacherService.process_video_transcription,
@@ -217,6 +218,25 @@ async def upload_lecture_video(
     )
 
     return {"message": "الفديو تم رفعه بنجاح."}
+
+
+@router.post("/lectures/{lecture_id}/upload-document", status_code=status.HTTP_201_CREATED)
+@limiter.limit(HEAVY_LIMIT)
+async def upload_lecture_document(
+    request: Request,
+    lecture_id: int,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_session),
+    current_user = Depends(PermissionChecker(["Publish"]))
+):
+    await TeacherService.upload_lecture_media(
+        db=db,
+        lecture_id=lecture_id,
+        file=file,
+        current_user=current_user,
+        media_type="document"
+    )
+    return {"message": "المستند تم رفعه بنجاح."}
 
 
 @router.post("/generate-ai", status_code=status.HTTP_201_CREATED)

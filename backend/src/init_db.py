@@ -24,6 +24,7 @@ from src.models.User_Permission import User_Permission
 from src.models.Invitation import Invitation
 from src.models.VerificationTok  import VerificationToken
 from src.models.Student_Mastery import Student_Mastery
+from src.models.Department import Department
 from src.core.dep import engine
 Quiz_Attempt.model_rebuild()
 

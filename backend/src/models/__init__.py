@@ -11,6 +11,7 @@ from src.models.Comment import Comment
 from src.models.Class_Manager import Class_Manager
 from src.models.Classroom import Classroom
 from src.models.Course import Course
+from src.models.Department import Department
 from .Roles import Roles
 from .Permission import Permission
 from .Roles_Permission import Roles_Permission

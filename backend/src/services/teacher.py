@@ -1,5 +1,6 @@
 import json
 import os
+import PyPDF2
 from groq import Groq
 import shutil
 from src.core.dep import engine
@@ -200,7 +201,8 @@ class TeacherService:
             .where(Lecture.course_id == course_id)
             .options(
                 selectinload(Lecture.course),
-                selectinload(Lecture.quiz)
+                selectinload(Lecture.quiz),
+                selectinload(Lecture.media)
             )
         )
         result = await db.exec(stmt_lectures)
@@ -360,8 +362,7 @@ class TeacherService:
 
 
     @staticmethod
-    async def upload_lecture_video(db: AsyncSession, lecture_id: int, file: UploadFile, current_user: User):
-
+    async def upload_lecture_media(db: AsyncSession, lecture_id: int, file: UploadFile, current_user: User, media_type: str = "video"):
         statement = select(Lecture).where(Lecture.lecture_id == lecture_id)
         result = await db.exec(statement)
         db_lecture = result.first()
@@ -371,16 +372,21 @@ class TeacherService:
 
         await get_owned_obj(db, Course, db_lecture.course_id, current_user)
         
-        if not file.content_type.startswith("video/"):
+        if media_type == "video" and not file.content_type.startswith("video/"):
             raise HTTPException(status_code=400, detail="الملف المرفوع يجب أن يكون فيديو فقط")
+        
+        if media_type == "document" and not (file.content_type == "application/pdf" or file.filename.lower().endswith(".pdf")):
+             raise HTTPException(status_code=400, detail="الملف المرفوع يجب أن يكون مستند PDF فقط")
 
-        upload_dir = os.path.join("media", "lectures")
+        # Select directory based on media type
+        sub_dir = "lectures" if media_type == "video" else "docs"
+        upload_dir = os.path.join("media", sub_dir)
         os.makedirs(upload_dir, exist_ok=True) 
 
         file_ext = os.path.splitext(file.filename)[1]
         unique_name = f"{uuid.uuid4()}{file_ext}"
         full_path = os.path.join(upload_dir, unique_name)
-        file_path_relative = os.path.join("media", "lectures", unique_name).replace("\\", "/")
+        file_path_relative = os.path.join("media", sub_dir, unique_name).replace("\\", "/")
 
         try:
             def save_file():
@@ -410,19 +416,71 @@ class TeacherService:
 
     @staticmethod
     async def generate_and_save_quiz(session: AsyncSession, data: QuizCreate, user_id: int):
-        statement = select(Lecture).where(Lecture.lecture_id == data.lecture_id)
+        statement = (
+            select(Lecture)
+            .where(Lecture.lecture_id == data.lecture_id)
+            .options(selectinload(Lecture.media), selectinload(Lecture.quiz))
+        )
         result = await session.exec(statement)
         lecture = result.first()
 
-        if not lecture or not lecture.text:
-            raise HTTPException(status_code=404, detail="المحاضرة غير موجودة أو لم تتم معالجتها بعد")
+        if not lecture:
+            raise HTTPException(status_code=404, detail="المحاضرة غير موجودة")
 
-        # Check if lecture already has a quiz
-        await session.refresh(lecture, ["quiz"])
         if lecture.quiz and len(lecture.quiz) > 0:
             raise HTTPException(status_code=400, detail="هذه المحاضرة لديها كويز بالفعل")
 
-        # Create Quiz record if quiz_id is missing
+        content_text = ""
+        source_label = ""
+
+        # Handle Source-Based selection
+        if data.source == "document":
+            source_label = "وثائق المحاضرة (PDF)"
+            # Extract text from the PDF media
+            pdf_media = next((m for m in lecture.media if "pdf" in m.mime_type or m.file_path.lower().endswith(".pdf")), None)
+            if not pdf_media:
+                 raise HTTPException(status_code=400, detail="لا يوجد ملف PDF مرفق لاستخدامه في توليد الكويز")
+            
+            try:
+                # Ensure path is absolute or relative to project root
+                pdf_path = os.path.abspath(pdf_media.file_path)
+                if not os.path.exists(pdf_path):
+                     raise FileNotFoundError(f"File not found at {pdf_path}")
+
+                with open(pdf_path, "rb") as pdf_file:
+                    reader = PyPDF2.PdfReader(pdf_file)
+                    for page in reader.pages:
+                        extracted = page.extract_text()
+                        if extracted:
+                            content_text += extracted + "\n"
+                
+                if not content_text.strip():
+                    raise ValueError("لم يتم العثور على نص قابل للقراءة في ملف PDF")
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"فشل استخراج النص من ملف PDF: {str(e)}")
+        else:
+            source_label = "صوت المحاضرة"
+            # Existing transcript logic
+            if not lecture.text:
+                raise HTTPException(
+                    status_code=400, 
+                    detail="المحاضرة لا تزال قيد المعالجة لاستخراج الصوت. يرجى المحاولة بعد قليل."
+                )
+            
+            try:
+                parsed_data = json.loads(lecture.text)
+                if isinstance(parsed_data, list):
+                    content_text = " ".join([item.get('text', '') for item in parsed_data if isinstance(item, dict)])
+                elif isinstance(parsed_data, dict) and "segments" in parsed_data:
+                    content_text = " ".join([item.get('text', '') for item in parsed_data["segments"] if isinstance(item, dict)])
+                else:
+                    content_text = str(lecture.text)
+            except (json.JSONDecodeError, TypeError):
+                content_text = str(lecture.text)
+
+        if not content_text or len(content_text.strip()) < 50:
+             raise HTTPException(status_code=400, detail=f"المحتوى المستخرج من {source_label} غير كافٍ لتوليد كويز متكامل (يجب أن يكون 50 حرفاً على الأقل)")
+
         target_quiz_id = data.quiz_id
         if not target_quiz_id:
             new_quiz = Quiz(
@@ -434,22 +492,7 @@ class TeacherService:
             await session.flush()
             await session.refresh(new_quiz)
             target_quiz_id = new_quiz.quiz_id
-
-        # Extract plain text from JSON subtitles if necessary
-        content_text = lecture.text
-        try:
-            parsed_data = json.loads(lecture.text)
-            if isinstance(parsed_data, list):
-                content_text = " ".join([item.get('text', '') for item in parsed_data if isinstance(item, dict)])
-            elif isinstance(parsed_data, dict) and "segments" in parsed_data:
-                content_text = " ".join([item.get('text', '') for item in parsed_data["segments"] if isinstance(item, dict)])
-        except (json.JSONDecodeError, TypeError):
-            # If not valid JSON, use original text as is
-            pass
-
-        if not content_text or len(content_text.strip()) < 10:
-             raise HTTPException(status_code=400, detail="محتوى المحاضرة غير كافٍ لتوليد كويز")
-
+        
         try:
             completion = groq_client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
@@ -505,7 +548,10 @@ class TeacherService:
                     session.add(new_opt)
 
             await session.commit()
-            return {"status": "success", "message": "تم توليد 15 سؤالاً وحفظ الخيارات بنجاح"}
+            return {
+                "status": "success", 
+                "message": f"تم توليد 15 سؤالاً بنجاح بناءً على {source_label}"
+            }
 
         except Exception as e:
             await session.rollback()
@@ -521,6 +567,7 @@ class TeacherService:
             select(Lecture)
             .options(
                 selectinload(Lecture.course),
+                selectinload(Lecture.media),
                 selectinload(Lecture.quiz).selectinload(Quiz.question).selectinload(Question.question_option)
             )
             .order_by(Lecture.lecture_id.desc())

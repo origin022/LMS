@@ -33,6 +33,7 @@
         name: data.name,
         profilePicture: data.profile_picture || "/default-avatar.png",
         role: data.roles_name || data.role,
+        user_id: data.user_id,
         loading: false,
       };
 
@@ -56,14 +57,23 @@
     }
   }
 
-  function guestLogin(): void {
+  async function guestLogin(): Promise<void> {
+    // Clear any existing session data first
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("user_session");
+      localStorage.removeItem("token");
+    }
+
     userStore.set({
       name: "Guest",
       profilePicture: "",
       role: "",
+      user_id: null,
       loading: false,
     });
-    goto("/home");
+    
+    // Direct navigation, (app) layout will see no cookies and treat as guest
+    await goto("/home", { invalidateAll: true });
   }
 </script>
 

@@ -36,6 +36,7 @@ class LectureSimple(BaseModel):
     description: Optional[str]
     created_at: datetime
     lecture_image: Optional[str] = None
+    media: list[MediaRead] = []
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -50,8 +51,9 @@ class LectureCreate(BaseModel):
 
 class QuizCreate(BaseModel):
     title: str
-    quiz_id:int
+    quiz_id: int
     lecture_id: int
+    source: Optional[str] = "video" # "video" or "document"
 
 class MediaRead(BaseModel):
     media_id: int

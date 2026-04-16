@@ -21,11 +21,17 @@
     } catch (e) {
       console.error("Logout failed:", e);
     } finally {
+      // Clear store
       userStore.set({ name: "", profilePicture: "", role: "", user_id: null, loading: false });
+      
       if (typeof window !== "undefined") {
+        // Clear storage
         localStorage.removeItem("user_session");
+        localStorage.removeItem("token");
+        
+        // Final fallback: redirect to login and force reload to clear any residual state
+        window.location.href = "/login";
       }
-      goto("/login");
     }
   }
 </script>

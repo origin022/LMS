@@ -194,15 +194,24 @@ class StudentService:
 
         next_q = (await db.exec(next_q_stmt)).first()
 
+        # منطق بديل ذكي: إذا انتهت أسئلة المستوى المستهدف
         if not next_q:
-            backup_q_stmt = select(Question).where(
-                Question.quiz_id == quiz_id,
-                Question.question_id.not_in(answered_ids) if answered_ids else True
-            ).order_by(func.random()).limit(1)
-            next_q = (await db.exec(backup_q_stmt)).first()
-
-        if not next_q:
-            return {"status": "completed", "message": " لقد أتممت جميع الأسئلة."}
+            if target_difficulty > 1:
+                # إذا كان الطالب في مستوى عالٍ، نبحث له عن أسئلة في المستوى الأقل (مراجعة)
+                backup_q_stmt = select(Question).where(
+                    Question.quiz_id == quiz_id,
+                    Question.difficulty_level < target_difficulty,
+                    Question.question_id.not_in(answered_ids) if answered_ids else True
+                ).order_by(Question.difficulty_level.desc()).limit(1)
+                next_q = (await db.exec(backup_q_stmt)).first()
+            
+            # إذا لم نجد (أو كان الطالب أصلاً في المستوى 1)
+            if not next_q:
+                reason = "لقد أتممت جميع الأسئلة المتاحة لمستواك."
+                if target_difficulty == 1 and len(answered_ids) < 10:
+                    reason = "لقد استنفدت الأسئلة التمهيدية. ننصحك بمراجعة المحاضرة جيداً قبل المحاولة مرة أخرى لرفع مستواك."
+                
+                return {"status": "completed", "message": reason}
 
         options_stmt = select(Question_Option).where(Question_Option.question_id == next_q.question_id)
         options = (await db.exec(options_stmt)).all()

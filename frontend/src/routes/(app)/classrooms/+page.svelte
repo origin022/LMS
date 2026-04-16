@@ -7,31 +7,44 @@
     class_id: number;
     class_name: string;
     class_image?: string;
+    department_id?: number;
+  }
+
+  interface Department {
+    department_id: number;
+    name: string;
   }
 
   let classrooms: Classroom[] = [];
+  let departments: Department[] = [];
   let searchQuery: string = "";
+  let selectedDeptId: number | null = null;
   let loading: boolean = true;
 
-  $: filteredClassrooms = classrooms.filter((c) =>
-    c.class_name?.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  $: filteredClassrooms = classrooms.filter((c) => {
+    const matchesSearch = c.class_name?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesDept = selectedDeptId ? c.department_id === selectedDeptId : true;
+    return matchesSearch && matchesDept;
+  });
 
-  async function loadClassrooms(): Promise<void> {
+  async function loadData(): Promise<void> {
     try {
       loading = true;
-      const res = await apiFetch("/classrooms");
-      if (res.ok) {
-        classrooms = await res.json();
-      }
+      const [cRes, dRes] = await Promise.all([
+        apiFetch("/classrooms"),
+        apiFetch("/admin/departments") // Note: using admin endpoint but public access might need separate endpoint later
+      ]);
+      
+      if (cRes.ok) classrooms = await cRes.json();
+      if (dRes.ok) departments = await dRes.json();
     } catch (err) {
-      console.error("Load Classrooms Error:", err);
+      console.error("Load Data Error:", err);
     } finally {
       loading = false;
     }
   }
 
-  onMount(loadClassrooms);
+  onMount(loadData);
 </script>
 
 <div class="p-8 max-w-7xl mx-auto" dir="rtl">
@@ -83,6 +96,27 @@
           class="w-full pr-12 pl-4 py-3.5 bg-white border border-gray-100 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-50 focus:border-blue-200 outline-none transition-all text-sm font-bold"
         />
       </div>
+    </div>
+
+    <div class="flex gap-2 overflow-x-auto no-scrollbar pb-4 mb-8">
+      <button
+        on:click={() => (selectedDeptId = null)}
+        class="px-6 py-2.5 rounded-xl text-xs font-black transition-all shadow-sm {selectedDeptId === null
+          ? 'bg-blue-600 text-white shadow-blue-200'
+          : 'bg-white text-slate-400 hover:bg-slate-50'}"
+      >
+        الكل
+      </button>
+      {#each departments as dept}
+        <button
+          on:click={() => (selectedDeptId = dept.department_id)}
+          class="px-6 py-2.5 rounded-xl text-xs font-black transition-all shadow-sm {selectedDeptId === dept.department_id
+            ? 'bg-blue-600 text-white shadow-blue-200'
+            : 'bg-white text-slate-400 hover:bg-slate-50'}"
+        >
+          {dept.name}
+        </button>
+      {/each}
     </div>
 
     {#if filteredClassrooms.length > 0}

@@ -24,6 +24,7 @@ dependencies = [
     "groq>=1.0.0",
     "httpx>=0.28.1",
     "slowapi>=0.1.9",
+    "pypdf2>=3.0.1",
 ]
 
 [tool.uv]
