@@ -19,4 +19,4 @@ COPY . .
 RUN uv sync --frozen
 
 ENV PYTHONPATH=/app
-CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "alembic upgrade head && python src/seed.py && python -m uvicorn main:app --host 0.0.0.0 --port 8000"]
