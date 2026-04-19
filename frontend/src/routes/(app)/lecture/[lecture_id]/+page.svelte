@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
   import { page } from "$app/stores";
-  import { apiFetch, BASE_URL, FILE_URL } from "$lib/api";
+  import { apiFetch, BASE_URL, FILE_URL, WS_URL } from "$lib/api";
   import { userStore } from "$lib/authStore";
   import QuizModal from "$lib/components/QuizModal.svelte";
   import {
@@ -229,7 +229,7 @@ async function handleAutoEnroll() {
     ws = null;
   }
 
-  const wsUrl = `ws://localhost:8000/api/v1/interactions/ws/${lectureId}`;
+  const wsUrl = `${WS_URL}/interactions/ws/${lectureId}`;
   ws = new WebSocket(wsUrl);
 
   ws.onopen = () => {
