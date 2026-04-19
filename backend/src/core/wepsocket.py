@@ -9,19 +9,25 @@ class ConnectionManager:
 
     async def connect(self, websocket: WebSocket, lecture_id: int):
         await websocket.accept()
+        lecture_id = int(lecture_id)
         if lecture_id not in self.active_connections:
             self.active_connections[lecture_id] = []
         self.active_connections[lecture_id].append(websocket)
+        print(f"DEBUG: New connection for lecture {lecture_id}. Total connections: {len(self.active_connections[lecture_id])}")
 
     def disconnect(self, websocket: WebSocket, lecture_id: int):
+        lecture_id = int(lecture_id)
         if lecture_id in self.active_connections:
             if websocket in self.active_connections[lecture_id]:
                 self.active_connections[lecture_id].remove(websocket)
             if not self.active_connections[lecture_id]:
                 del self.active_connections[lecture_id]
+        print(f"DEBUG: Disconnected from lecture {lecture_id}")
 
     async def broadcast_to_lecture(self, lecture_id: int, message: dict):
+        lecture_id = int(lecture_id)
         if lecture_id not in self.active_connections:
+            print(f"DEBUG: No active connections to broadcast for lecture {lecture_id}")
             return
 
         connections = list(self.active_connections[lecture_id])
@@ -30,7 +36,8 @@ class ConnectionManager:
             try:
                 # Parallel send with a timeout for each connection
                 await asyncio.wait_for(connection.send_json(message), timeout=5.0)
-            except Exception:
+            except Exception as e:
+                print(f"DEBUG: Failed to send to a client, disconnecting: {e}")
                 self.disconnect(connection, lecture_id)
 
         # We don't await this directly if we want the POST request to be super fast,

@@ -25,7 +25,7 @@ async def create_comment(
     
     pic_url = None
     if c.user and c.user.profile and c.user.profile.profile_picture_data:
-        pic_url = f"{request.base_url}api/v1/users/{c.user_id}/picture"
+        pic_url = f"{str(request.base_url).rstrip('/')}/api/v1/users/{c.user_id}/picture"
     
     comment_payload = {
         "comment_id": c.comment_id,
@@ -38,8 +38,9 @@ async def create_comment(
         }
     }
 
+    print(f"DEBUG: Broadcasting new comment for lecture {lecture_id}")
     asyncio.create_task(
-        manager.broadcast_to_lecture(lecture_id, comment_payload)
+        manager.broadcast_to_lecture(int(lecture_id), comment_payload)
     )       
     return comment_payload
 @router.get("/lectures/{lecture_id}/comments", response_model=List[Commentred])
