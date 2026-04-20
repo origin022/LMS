@@ -535,10 +535,10 @@ $: if (Math.floor(currentTime) !== lastTime) {
             >
               <div class="flex gap-5">
                 <a
-                  href={$userStore.name && comment.user.name == $userStore.name ? '/profile' : `/profile/${comment.user_id}`}
+                  href={$userStore.name && comment.user?.name?.trim().toLowerCase() === $userStore.name.trim().toLowerCase() ? '/profile' : `/profile/${comment.user_id}`}
                   class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-500/10 overflow-hidden hover:ring-2 hover:ring-indigo-400 transition-all cursor-pointer flex-shrink-0"
                 >
-                  {#if $userStore.name && comment.user.name == $userStore.name}
+                  {#if $userStore.name && comment.user?.name?.trim().toLowerCase() === $userStore.name.trim().toLowerCase()}
                     <img
                       src={$userStore.profilePicture}
                       alt="Me"
@@ -559,7 +559,7 @@ $: if (Math.floor(currentTime) !== lastTime) {
                 <div class="flex-1 space-y-2">
                   <div class="flex justify-between items-center">
                     <a 
-                      href={$userStore.name && comment.user.name == $userStore.name ? '/profile' : `/profile/${comment.user_id}`} 
+                      href={$userStore.name && comment.user?.name?.trim().toLowerCase() === $userStore.name.trim().toLowerCase() ? '/profile' : `/profile/${comment.user_id}`} 
                       class="text-indigo-400 font-bold text-sm hover:underline cursor-pointer"
                     >
                       {comment.user?.name || "طالب مجهول"}

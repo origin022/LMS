@@ -30,9 +30,10 @@ async def login(
 
     return {
         "user_id": user.user_id,
+        "name": user.name,
         "email": user.email,
         "role": user.roles.roles_name if user.roles else None,
-        "access_token": access  # Return token for mobile storage
+        "access_token": access  # Decisive token for mobile
     }
 
 

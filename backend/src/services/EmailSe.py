@@ -71,14 +71,13 @@ class EmailService:
             msg = "تم تفعيل حسابك كطالب بنجاح!"
         else:
             user.state_id = 2
-            msg = "تم تأكيد الإيميل."
+            msg = "تم تأكيد بريدك الإلكتروني، يرجى انتظار تفعيل الحساب من قبل الإدارة."
 
         await db.delete(token_record)
         await db.commit()
     
         await db.refresh(user)
 
-        # Redirect to frontend login page with a success message
         from fastapi.responses import RedirectResponse
-        frontend_login = f"{config.FRONTEND_URL.rstrip('/')}/login?verified=true"
+        frontend_login = f"{config.FRONTEND_URL.rstrip('/')}/login?verified=true&role={user.roles_id}"
         return RedirectResponse(url=frontend_login)

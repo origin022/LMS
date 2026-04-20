@@ -323,14 +323,14 @@
   <div
     class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-[2.5rem] shadow-sm border border-slate-100"
   >
-    <div class="flex gap-2 overflow-x-auto no-scrollbar">
-      {#each [["classrooms", "المجالات"], ["users", "المستخدمين"], ["invites", "الدعوات"], ["roles", "إنشاء رتبة"]] as [id, label]}
+    <div class="flex gap-3 overflow-x-auto no-scrollbar w-full pb-2 px-2 scroll-smooth">
+      {#each [["classrooms", "المجالات"], ["users", "المستخدمين"], ["invites", "الدعوات"], ["roles", "رتبة"]] as [id, label]}
         <button
           on:click={() => (activeTab = id as any)}
-          class="px-6 py-3 rounded-2xl text-xs font-black transition-all {activeTab ===
+          class="whitespace-nowrap px-6 py-3 rounded-2xl text-[11px] md:text-xs font-black transition-all flex-shrink-0 {activeTab ===
           id
             ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
-            : 'text-slate-400 hover:bg-slate-50'}"
+            : 'text-slate-400 hover:bg-slate-50 border border-transparent hover:border-slate-100'}"
         >
           {label}
         </button>

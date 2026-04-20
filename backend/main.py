@@ -30,13 +30,26 @@ app.state.limiter = limiter
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# Explicit list of allowed origins
+origins = [str(origin).rstrip("/") for origin in config.BACKEND_CORS_ORIGINS] or [
+    "https://lms-frontend-z55o.onrender.com",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+# In development, also allow common local network IPs (e.g., 192.168.x.x)
+if config.ENVIRONMENT == "development":
+    import socket
+    try:
+        hostname = socket.gethostname()
+        local_ip = socket.gethostbyname(hostname)
+        origins.append(f"http://{local_ip}:5173")
+    except:
+        pass
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[str(origin).rstrip("/") for origin in config.BACKEND_CORS_ORIGINS] or [
-        "https://lms-frontend-z55o.onrender.com",  
-        "http://localhost:5173",                  
-        "http://localhost",
-    ],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

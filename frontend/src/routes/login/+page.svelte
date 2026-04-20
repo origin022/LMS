@@ -104,6 +104,16 @@
       <p class="text-gray-400 text-sm mt-0.5 font-bold">سجل دخولك للمتابعة</p>
     </div>
 
+    {#if typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('verified') === 'true'}
+      <div class="bg-green-50 text-green-600 p-4 rounded-2xl mb-4 text-xs font-black border border-green-100 mt-4">
+        {#if new URLSearchParams(window.location.search).get('role') === '4'}
+          تم تفعيل حسابك بنجاح! يمكنك الآن تسجيل الدخول.
+        {:else}
+          تم تأكيد هويتك، يرجى انتظار تفعيل الحساب من قبل الإدارة.
+        {/if}
+      </div>
+    {/if}
+
     {#if error}
       <div
         class="bg-red-50 text-red-600 p-3 rounded-2xl mb-4 text-xs font-black border border-red-100 flex items-center justify-center gap-2 mt-2"

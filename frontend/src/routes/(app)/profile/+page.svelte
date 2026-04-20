@@ -210,7 +210,7 @@
                 {#if profile.picture}
                   <img 
                     id="profile-pic"
-                    src={`${BASE_URL}/picture/me`} 
+                    src={$userStore.profilePicture || `${BASE_URL}/picture/me`} 
                     alt="Profile" 
                     class="w-full h-full object-cover"
                   />

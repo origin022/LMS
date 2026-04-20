@@ -37,7 +37,7 @@
 </script>
 
 <aside
-  class="bg-white border-l border-gray-100 shadow-sm transition-all duration-300 flex flex-col h-screen {$sidebarOpen
+  class="fixed top-0 right-0 z-50 bg-white border-l border-gray-100 shadow-2xl transition-all duration-300 flex flex-col h-screen {$sidebarOpen
     ? 'w-72'
     : 'w-0 overflow-hidden'}"
   dir="rtl"
