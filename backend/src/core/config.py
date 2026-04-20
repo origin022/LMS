@@ -41,8 +41,8 @@ class Config(BaseSettings):
         
         return url
 
-    API_URL: str = "http://localhost:8000"
-    FRONTEND_URL: str = "http://localhost:5173"
+    API_URL: str
+    FRONTEND_URL: str
 
     BACKEND_CORS_ORIGINS: List[AnyUrl] = []
 
