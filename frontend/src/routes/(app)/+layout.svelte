@@ -39,7 +39,7 @@
         name: data.name || "مستخدم",
         profilePicture: imageBlobUrl,
         hasPicture: !!data.picture, // Track if user has a picture
-        role: data.role || "",
+        role: data.roles_name || data.role || "",
         user_id: data.user_id ?? null,
         loading: false,
       };
@@ -48,7 +48,7 @@
 
       // Save only serializable data to localStorage (No blob URLs!)
       if (typeof window !== "undefined") {
-        const serializableData = { ...userData, profilePicture: "" }; 
+        const serializableData = { ...userData, profilePicture: "" };
         localStorage.setItem("user_session", JSON.stringify(serializableData));
       }
     } catch (error) {
@@ -86,7 +86,7 @@
       <!-- svelte-ignore a11y-click-events-have-key-events -->
       <!-- svelte-ignore a11y-no-static-element-interactions -->
       <div 
-        class="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-all duration-300"
+        class="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden transition-all duration-300"
         on:click={() => sidebarOpen.set(false)}
       ></div>
     {/if}
