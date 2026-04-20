@@ -21,14 +21,20 @@ class EmailService:
     @staticmethod
     async def send_universal_mail(to_email: str, token: str, subject: str, template: str, route: str):
         EmailService._setup_gmail()
-        magic_link = f"{config.API_URL}/api/v1/{route}?token={token}"
+        
+        # Build base URL carefully to avoid localhost issues or double slashes
+        base_url = config.API_URL.rstrip("/")
+        if "/api/v1" not in base_url:
+            base_url = f"{base_url}/api/v1"
+            
+        magic_link = f"{base_url}/{route}?token={token}"
         
         gmail.send(
             subject=subject,
-        receivers=[to_email],
-        html_template=template,
-        body_params={"link": magic_link}
-    )
+            receivers=[to_email],
+            html_template=template,
+            body_params={"link": magic_link}
+        )
     @staticmethod
     async def verify_user_email(token: str, db: AsyncSession):
         statement = select(VerificationToken).where(VerificationToken.token == token)
@@ -72,4 +78,7 @@ class EmailService:
     
         await db.refresh(user)
 
-        return {"message": msg, "state_id": user.state_id}
+        # Redirect to frontend login page with a success message
+        from fastapi.responses import RedirectResponse
+        frontend_login = f"{config.FRONTEND_URL.rstrip('/')}/login?verified=true"
+        return RedirectResponse(url=frontend_login)

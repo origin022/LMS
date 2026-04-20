@@ -41,6 +41,9 @@
 
       if (typeof window !== "undefined") {
         localStorage.setItem("user_session", JSON.stringify(userData));
+        if (data.access_token) {
+          localStorage.setItem("token", data.access_token);
+        }
       }
 
       const normalizedRole = (userData.role || "").toLowerCase().trim();

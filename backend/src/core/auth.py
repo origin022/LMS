@@ -23,7 +23,14 @@ async def get_current_user(
     
 
 
+    # Try to get token from cookies or Authorization header
     token = request.cookies.get("access_token")
+    
+    if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+
     if not token:
         raise HTTPException(status_code=401)
 
@@ -59,10 +66,20 @@ class PermissionChecker:
         current_user: User = Depends(get_current_user),
         db: AsyncSession = Depends(get_session)
     ):
-        if current_user.state_id != 1:  
+        if current_user.state_id == 2:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="حسابك معطل، يرجى التواصل مع الدعم"
+                detail="حسابك بانتظار التفعيل، يرجى التحقق من بريدك الإلكتروني"
+            )
+        elif current_user.state_id == 3:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="تم حظر حسابك نهائياً من قبل الإدارة"
+            )
+        elif current_user.state_id != 1:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="حسابك غير نشط حالياً، يرجى مراجعة الدعم"
             )
 
         user_role_permissions = []

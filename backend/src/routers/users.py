@@ -35,7 +35,7 @@ async def get_user_full_profile(
     user = await UserService.get_public_user_data(db, user_id)
     
     if not user:
-        raise HTTPException(status_code=404, detail="user not found")
+        raise HTTPException(status_code=404, detail="المستخدم غير موجود")
 
     pic_url = None
     if user.profile and user.profile.profile_picture_data:

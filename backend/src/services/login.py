@@ -27,7 +27,7 @@ async def authenticate_user(
     user = result.first()
 
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=401, detail="البريد الإلكتروني أو كلمة المرور غير صحيحة")
 
     is_valid = await run_in_threadpool(
         verify_password,
@@ -36,22 +36,30 @@ async def authenticate_user(
     )
 
     if not is_valid:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=401, detail="البريد الإلكتروني أو كلمة المرور غير صحيحة")
 
-    if user.state_id != 1:
-        raise HTTPException(status_code=403, detail="Account disabled")
+    if user.state_id == 2:
+        raise HTTPException(status_code=403, detail="حسابك بانتظار التفعيل، يرجى التحقق من بريدك الإلكتروني")
+    elif user.state_id == 3:
+        raise HTTPException(status_code=403, detail="تم حظر حسابك من قبل الإدارة")
+    elif user.state_id != 1:
+        raise HTTPException(status_code=403, detail="حسابك غير نشط حالياً")
 
     return user
 
 
 def set_auth_cookies(response: Response, access: str, refresh: str):
-
+    from src.core.config import config
+    
+    # In development, we might not use HTTPS, so we adjust cookie settings
+    is_prod = config.ENVIRONMENT == "production"
+    
     response.set_cookie(
         key="access_token",
         value=access,
         httponly=True,
-        samesite="none",
-        secure=True,
+        samesite="lax" if not is_prod else "none",
+        secure=is_prod,  # Must be True for samesite="none"
         path="/"
     )
 
@@ -59,7 +67,7 @@ def set_auth_cookies(response: Response, access: str, refresh: str):
         key="refresh_token",
         value=refresh,
         httponly=True,
-        samesite="none",
-        secure=True,
+        samesite="lax" if not is_prod else "none",
+        secure=is_prod,
         path="/"
     )

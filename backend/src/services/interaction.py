@@ -16,8 +16,12 @@ class InteractionS:
             lecture_id=comment_data.lecture_id,
             user_id=current_user.user_id
         )
-        if current_user.state_id != 1:
-            raise HTTPException(status_code=403, detail="حسابك غير نشط")
+        if current_user.state_id == 2:
+            raise HTTPException(status_code=403, detail="يرجى تفعيل حسابك أولاً لتتمكن من التعليق")
+        elif current_user.state_id == 3:
+            raise HTTPException(status_code=403, detail="حسابك محظور من التعليق والمشاركة")
+        elif current_user.state_id != 1:
+            raise HTTPException(status_code=403, detail="حسابك غير نشط حالياً")
 
       
         db.add(new_comment)
