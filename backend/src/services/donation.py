@@ -153,11 +153,11 @@ class DonationService:
                 raise HTTPException(status_code=404, detail="العملية غير موجودة")
 
             if status == "SUCCESS":
-                donation.status = PaymentStatus.SUCCESS
+                donation.status = PaymentStatus.SUCCESS.value
             elif status == "FAILED":
-                donation.status = PaymentStatus.FAILED
+                donation.status = PaymentStatus.FAILED.value
             else:
-                donation.status = PaymentStatus.PENDING
+                donation.status = PaymentStatus.PENDING.value
 
             db.add(donation)
             await db.commit()
