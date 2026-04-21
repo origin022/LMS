@@ -46,7 +46,7 @@ class AdminService:
     async def get_departments(db: AsyncSession):
         statement = select(Department)
         result = await db.exec(statement)
-        return result.scalars().all()
+        return result.all()
 
     @staticmethod
     async def delete_department(db: AsyncSession, department_id: int):
@@ -269,10 +269,10 @@ class AdminService:
     async def get_all_classrooms(db: AsyncSession):
         statement = select(Classroom).options(
             selectinload(Classroom.course),
-            joinedload(Classroom.department)
+            selectinload(Classroom.department)
         )
         result = await db.exec(statement)
-        classrooms = result.scalars().unique().all()
+        classrooms = result.unique().all()
         
         for cls in classrooms:
             cls.courses_count = len(cls.course) if cls.course else 0
