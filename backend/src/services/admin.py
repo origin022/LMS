@@ -13,7 +13,7 @@ from src.models.User import User
 from src.models.Course import Course
 from src.models.Teacher_Assignment import Teacher_Assignment
 from src.models.Department import Department
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 from fastapi import UploadFile
 import os
 import uuid
@@ -46,7 +46,7 @@ class AdminService:
     async def get_departments(db: AsyncSession):
         statement = select(Department)
         result = await db.exec(statement)
-        return result.all()
+        return result.scalars().all()
 
     @staticmethod
     async def delete_department(db: AsyncSession, department_id: int):
@@ -269,13 +269,13 @@ class AdminService:
     async def get_all_classrooms(db: AsyncSession):
         statement = select(Classroom).options(
             selectinload(Classroom.course),
-            selectinload(Classroom.department)
+            joinedload(Classroom.department)
         )
         result = await db.exec(statement)
-        classrooms = result.all()
+        classrooms = result.scalars().unique().all()
         
         for cls in classrooms:
-            cls.courses_count = len(cls.course)
+            cls.courses_count = len(cls.course) if cls.course else 0
 
         return classrooms
 
