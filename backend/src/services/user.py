@@ -6,6 +6,7 @@ from fastapi import HTTPException, status
 from src.models.VerificationTok import TokenType, VerificationToken
 from src.services.EmailSe import EmailService
 from src.models.User import User
+from src.models.Profile import Profile
 from src.models import Teacher_Assignment
 from src.schemas.user import UserCreate, UserInvitationRegister
 from src.core.security import hash_password
@@ -35,6 +36,8 @@ async def create_new_user(
         state_id=2, 
     )
     db.add(new_user)
+    await db.flush()
+    db.add(Profile(user_id=new_user.user_id))
 
     raw_token = str(uuid.uuid4())
     

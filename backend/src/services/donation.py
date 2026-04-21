@@ -33,7 +33,7 @@ class DonationService:
             if DonationService._cached_token and current_time < (DonationService._token_expires_at - 120):
                 return DonationService._cached_token
 
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
                     f"{DonationService.BASE_URL}/oauth2/token",
                     data={

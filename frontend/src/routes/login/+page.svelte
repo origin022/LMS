@@ -5,6 +5,7 @@
 
   let email = "",
     password = "",
+    showPassword = false,
     error = "",
     loading = false;
 
@@ -133,14 +134,25 @@
         />
       </div>
 
-      <div class="space-y-1">
+      <div class="space-y-1 relative group">
         <input
-          type="password"
+          type={showPassword ? "text" : "password"}
           placeholder="كلمة المرور"
           bind:value={password}
-          class="w-full p-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-right focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-bold text-sm shadow-inner"
+          class="w-full p-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-right focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-bold text-sm shadow-inner pl-12"
           required
         />
+        <button
+          type="button"
+          class="absolute left-3 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-blue-600 transition-colors bg-white/50 rounded-xl hover:bg-white"
+          on:click={() => (showPassword = !showPassword)}
+        >
+          {#if showPassword}
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+          {:else}
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          {/if}
+        </button>
       </div>
 
       <div class="pt-2 space-y-2">

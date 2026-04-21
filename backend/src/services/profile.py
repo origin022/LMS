@@ -17,7 +17,23 @@ class ProfileService:
             .options(selectinload(Profile.user))
         )
         result = await db.exec(statement)
-        return result.first()
+        profile = result.first()
+        
+        if not profile:
+            profile = Profile(user_id=user_id)
+            db.add(profile)
+            await db.commit()
+            await db.refresh(profile)
+            # Re-fetch with options
+            statement = (
+                select(Profile)
+                .where(Profile.user_id == user_id)
+                .options(selectinload(Profile.user))
+            )
+            result = await db.exec(statement)
+            profile = result.first()
+            
+        return profile
 
     @staticmethod
     async def update_profile_info(
@@ -33,10 +49,8 @@ class ProfileService:
             if db_user:
                 db_user.name = data.name
 
-        # جلب البروفايل
-        profile_stmt = select(Profile).where(Profile.user_id == user_id)
-        profile_res = await db.exec(profile_stmt)
-        db_profile = profile_res.first()
+        # جلب البروفايل (باستخدام الميثود الجديدة للتأكد من وجوده)
+        db_profile = await ProfileService.get_profile(db, user_id)
 
         if not db_profile:
             return None
@@ -62,9 +76,7 @@ class ProfileService:
         user_id: int,
         image_bytes: bytes
     ):
-        statement = select(Profile).where(Profile.user_id == user_id)
-        result = await db.exec(statement)
-        db_profile = result.first()
+        db_profile = await ProfileService.get_profile(db, user_id)
 
         if not db_profile:
             return None
@@ -74,4 +86,4 @@ class ProfileService:
         await db.commit()
         await db.refresh(db_profile)
 
-        return db_profile
+        return db_profile
