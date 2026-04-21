@@ -19,6 +19,7 @@ class ClassroomRead(BaseModel):
     class_name: str
     class_image: Optional[str] = None
     department_id: Optional[int] = None
+    courses_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
 

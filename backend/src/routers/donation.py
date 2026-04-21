@@ -19,5 +19,5 @@ async def start_donation(request: Request, data: DonationCreate, db: AsyncSessio
 async def payment_callback(request: Request, token: str, db: AsyncSession = Depends(get_session)):
     result = await DonationService.verify_zaincash_callback(token, db)
     return RedirectResponse(
-        url=f"{config.FRONTEND_URL}/payment-status?status={result['status']}&donation_id={result['donation_id']}"
+        url=f"{config.FRONTEND_URL}/payment-status?status={result['status'].upper()}&donation_id={result['donation_id']}"
     )

@@ -146,20 +146,23 @@
 
 
       if (res.ok) {
-    if (profile) profile.picture = true;
-    
-    const newPicUrl = `${BASE_URL}/picture/me?t=${Date.now()}`;
+        if (profile) profile.picture = true;
+        
+        // Create a local blob URL for immediate update across all components
+        const localUrl = URL.createObjectURL(file);
 
-    userStore.update(u => ({
-        ...u,
-        profilePicture: newPicUrl
-    }));
+        userStore.update(u => ({
+            ...u,
+            profilePicture: localUrl,
+            hasPicture: true
+        }));
 
-    showMsg("تم تغيير الصورة بنجاح ✅");
-    
-    const img = document.getElementById('profile-pic') as HTMLImageElement;
-    if (img) img.src = newPicUrl;
-}
+        showMsg("تم تغيير الصورة بنجاح ✅");
+        
+        // Force refresh the local image element if needed
+        const img = document.getElementById('profile-pic') as HTMLImageElement;
+        if (img) img.src = localUrl;
+      }
 
   else {
         showMsg("فشل رفع الصورة", "error");

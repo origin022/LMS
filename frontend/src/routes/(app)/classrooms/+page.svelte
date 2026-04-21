@@ -8,6 +8,7 @@
     class_name: string;
     class_image?: string;
     department_id?: number;
+    courses_count?: number;
   }
 
   interface Department {
@@ -32,7 +33,7 @@
       loading = true;
       const [cRes, dRes] = await Promise.all([
         apiFetch("/classrooms"),
-        apiFetch("/admin/departments") // Note: using admin endpoint but public access might need separate endpoint later
+        apiFetch("/departments")
       ]);
       
       if (cRes.ok) classrooms = await cRes.json();
@@ -138,13 +139,21 @@
               </div>
             {/if}
             
-            <div class="p-4 flex flex-col items-start w-full bg-white z-10 relative">
-              <h3 class="text-lg font-bold text-gray-800 line-clamp-2 w-full leading-tight">
-                {classroom.class_name}
-              </h3>
-              <div class="mt-3 flex items-center justify-between w-full opacity-0 group-hover:opacity-100 transition-opacity">
-                <span class="text-xs font-black text-blue-500 bg-blue-50 px-2 py-1 rounded"> عرض المحتوى</span>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            <div class="p-5 flex flex-col items-start w-full bg-white z-10 relative">
+              <div class="flex justify-between items-start w-full gap-2">
+                <h3 class="text-lg font-bold text-gray-800 line-clamp-1 leading-tight flex-1">
+                  {classroom.class_name}
+                </h3>
+                <span class="text-[10px] bg-slate-50 text-slate-400 px-2 py-1 rounded-lg font-black whitespace-nowrap">
+                  {classroom.courses_count || 0} كورس
+                </span>
+              </div>
+              
+              <div class="mt-4 flex items-center justify-between w-full opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0">
+                <span class="text-xs font-black text-blue-500 bg-blue-50 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+                   استكشاف الآن
+                   <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"/></svg>
+                </span>
               </div>
             </div>
           </button>

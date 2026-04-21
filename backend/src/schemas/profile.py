@@ -7,7 +7,7 @@ class UpdateProfile(BaseModel):
 
 class ProfileUpdateResponse(BaseModel):
     name: str
-    bio: str
+    bio: Optional[str] = None
     has_picture: bool
 
 class ReadProfile(BaseModel):

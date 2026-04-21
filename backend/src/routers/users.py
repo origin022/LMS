@@ -1,7 +1,7 @@
 import io
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlmodel import select 
-from src.schemas.admin import ClassroomRead
+from src.schemas.admin import ClassroomRead, DepartmentRead
 from src.services.admin import AdminService
 from src.core.auth import PermissionChecker, get_current_user , get_current_user_optional
 from src.schemas.teacher import CourseRead, CourseWithLectures, LectureRead, LectureSimple
@@ -24,6 +24,14 @@ async def get_all_classrooms(
     db: AsyncSession = Depends(get_session),
 ):
     return await AdminService.get_all_classrooms(db)
+
+@router.get("/departments", response_model=list[DepartmentRead])
+@limiter.limit(PUBLIC_LIMIT)
+async def get_departments(
+    request: Request,
+    db: AsyncSession = Depends(get_session),
+):
+    return await AdminService.get_departments(db)
 
 @router.get("/users/{user_id}", response_model=ReadeUserPublic)
 @limiter.limit(PUBLIC_LIMIT)

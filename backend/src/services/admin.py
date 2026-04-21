@@ -273,6 +273,10 @@ class AdminService:
         )
         result = await db.exec(statement)
         classrooms = result.all()
+        
+        for cls in classrooms:
+            cls.courses_count = len(cls.course)
+
         return classrooms
 
     @staticmethod
