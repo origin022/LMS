@@ -14,6 +14,7 @@ class Classroom(SQLModel , table =True) :
     teacher_assignment :list["Teacher_Assignment"] = Relationship(back_populates="classroom", cascade_delete=True)
     course : list["Course"] = Relationship(back_populates="classroom", cascade_delete=True)
     class_image: str | None = Field(default=None)    
+    courses_count: int = Field(default=0, sa_column=None)
 
     class_manager : list["Class_Manager"] = Relationship(back_populates="classroom", cascade_delete=True)
     department: "Department" = Relationship(back_populates="classrooms")
