@@ -272,12 +272,7 @@ class AdminService:
             selectinload(Classroom.department)
         )
         result = await db.exec(statement)
-        classrooms = result.unique().all()
-        
-        for cls in classrooms:
-            cls.courses_count = len(cls.course) if cls.course else 0
-
-        return classrooms
+        return result.unique().all()
 
     @staticmethod
     async def get_invitable_roles(db: AsyncSession):

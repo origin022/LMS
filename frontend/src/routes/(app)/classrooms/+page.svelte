@@ -144,9 +144,11 @@
                 <h3 class="text-lg font-bold text-gray-800 line-clamp-1 leading-tight flex-1">
                   {classroom.class_name}
                 </h3>
-                <span class="text-[10px] bg-slate-50 text-slate-400 px-2 py-1 rounded-lg font-black whitespace-nowrap">
-                  {classroom.courses_count || 0} كورس
-                </span>
+                {#if classroom.courses_count !== undefined}
+                  <span class="text-[10px] bg-slate-50 text-slate-400 px-2 py-1 rounded-lg font-black whitespace-nowrap">
+                    {classroom.courses_count} كورس
+                  </span>
+                {/if}
               </div>
               
               <div class="mt-4 flex items-center justify-between w-full opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0">

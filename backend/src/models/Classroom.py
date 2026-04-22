@@ -1,4 +1,3 @@
-from pydantic import ConfigDict
 from sqlmodel import SQLModel , Field , Relationship
 from typing import TYPE_CHECKING  ,List
 if TYPE_CHECKING:
@@ -15,8 +14,6 @@ class Classroom(SQLModel , table =True) :
     teacher_assignment :list["Teacher_Assignment"] = Relationship(back_populates="classroom", cascade_delete=True)
     course : list["Course"] = Relationship(back_populates="classroom", cascade_delete=True)
     class_image: str | None = Field(default=None)    
-    
-    model_config = ConfigDict(extra='allow')
 
     class_manager : list["Class_Manager"] = Relationship(back_populates="classroom", cascade_delete=True)
     department: "Department" = Relationship(back_populates="classrooms")
