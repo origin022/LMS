@@ -267,12 +267,9 @@ class AdminService:
        
     @staticmethod
     async def get_all_classrooms(db: AsyncSession):
-        statement = select(Classroom).options(
-            selectinload(Classroom.course),
-            selectinload(Classroom.department)
-        )
+        statement = select(Classroom)
         result = await db.exec(statement)
-        return result.unique().all()
+        return result.all()
 
     @staticmethod
     async def get_invitable_roles(db: AsyncSession):
