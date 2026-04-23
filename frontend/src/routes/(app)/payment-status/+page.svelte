@@ -6,7 +6,7 @@
   $: status = $page.url.searchParams.get("status");
   $: donationId = $page.url.searchParams.get("donation_id");
 
-  const isSuccess = status === "SUCCESS";
+  $: isSuccess = status === "SUCCESS";
 </script>
 
 <div class="min-h-[80vh] flex items-center justify-center p-6" dir="rtl">
