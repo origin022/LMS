@@ -55,7 +55,7 @@
   async function loadData() {
     loading = true;
     try {
-      const resClassrooms = await apiFetch("/classrooms");
+      const resClassrooms = await apiFetch("/teacher/classrooms");
       if (resClassrooms.ok) {
         classrooms = await resClassrooms.json();
       }
@@ -74,8 +74,8 @@
   onMount(loadData);
 
   async function createCourse() {
-    if (!courseName.trim()) {
-      return showMsg("يرجى إدخال اسم الكورس", "error");
+    if (!courseName.trim() || !selectedClassId) {
+      return showMsg("يرجى إدخال اسم الكورس واختيار الكلاس", "error");
     }
     creatingCourse = true;
     try {
@@ -83,6 +83,7 @@
         method: "POST",
         body: JSON.stringify({
           name: courseName.trim(),
+          class_id: parseInt(selectedClassId),
         }),
       });
       if (!res.ok) {
@@ -294,6 +295,16 @@
               placeholder="مثال: الرياضيات للمرحلة الثانوية"
               class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none font-bold text-slate-700 focus:ring-2 focus:ring-blue-500/20"
             />
+          </div>
+
+          <div class="space-y-2">
+            <label for="sel-class" class="text-xs font-black text-slate-500">اختر الكلاس التابع لقسمك</label>
+            <select id="sel-class" bind:value={selectedClassId} class="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none font-bold text-slate-700 text-sm focus:ring-2 focus:ring-blue-500/20">
+              <option value="">-- اختر الكلاس --</option>
+              {#each classrooms as cls}
+                <option value={String(cls.class_id)}>{cls.class_name}</option>
+              {/each}
+            </select>
           </div>
 
           <div class="space-y-2">

@@ -9,7 +9,7 @@ class UserCreate(BaseModel):
     email: EmailStr = Field(...)
     password: str = Field(..., min_length=8)
     roles_id: int = Field(..., ge=3, le=4,)
-    class_id: Optional[int] = None
+    department_id: Optional[int] = None
     phone:str=  Field(
         ...,
         max_length=20, 

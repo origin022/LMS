@@ -55,10 +55,10 @@ async def create_new_user(
     await db.commit()
     await db.refresh(new_user)
 
-    if user_data.roles_id == 3 and user_data.class_id:
+    if user_data.roles_id == 3 and user_data.department_id:
         assignment = Teacher_Assignment(
             user_id=new_user.user_id,
-            class_id=user_data.class_id
+            department_id=user_data.department_id
         )
         db.add(assignment)
         await db.commit()

@@ -5,22 +5,22 @@
   import { apiFetch } from '$lib/api';
 
   let name = '', email = '', password = '', phone = '', roles_id = '';
-  let classrooms: any[] = [];
-  let selectedClassId = '';
+  let departments: any[] = [];
+  let selectedDepartmentId = '';
   let error = '', success = '', loading = false, showPassword = false;
 
   onMount(async () => {
     try {
-      const res = await apiFetch('/classrooms');
-      if (res.ok) classrooms = await res.json();
+      const res = await apiFetch('/departments');
+      if (res.ok) departments = await res.json();
     } catch (e) {
-      console.error('Failed to fetch classrooms', e);
+      console.error('Failed to fetch departments', e);
     }
   });
 
   async function handleRegister() {
-    if (roles_id == '3' && !selectedClassId) {
-      error = 'يرجى اختيار المجال الدراسي أولاً';
+    if (roles_id == '3' && !selectedDepartmentId) {
+      error = 'يرجى اختيار القسم التابع له أولاً';
       return;
     }
     error = ''; success = ''; loading = true;
@@ -33,7 +33,7 @@
           password, 
           phone, 
           roles_id: parseInt(roles_id),
-          class_id: roles_id == '3' ? parseInt(selectedClassId) : null
+          department_id: roles_id == '3' ? parseInt(selectedDepartmentId) : null
         })
       });
 
@@ -108,11 +108,11 @@
 
         {#if roles_id == '3'}
           <div in:fly={{ y: -10, duration: 300 }} class="flex flex-col">
-            <label for="classroom" class="block text-xs text-blue-500 font-bold mr-1 mb-1 mt-1">اختر المجال الدراسي الخاصة بك</label>
-            <select id="classroom" bind:value={selectedClassId} class="w-full p-2.5 border border-blue-200 rounded-lg text-right bg-blue-50/50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all cursor-pointer font-bold">
-              <option value="">-- اختر المادة الدراسية --</option>
-              {#each classrooms as cls}
-                <option value={cls.class_id}>{cls.class_name}</option>
+            <label for="department" class="block text-xs text-blue-500 font-bold mr-1 mb-1 mt-1">اختر القسم الخاص بك</label>
+            <select id="department" bind:value={selectedDepartmentId} class="w-full p-2.5 border border-blue-200 rounded-lg text-right bg-blue-50/50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all cursor-pointer font-bold">
+              <option value="">-- اختر القسم --</option>
+              {#each departments as dep}
+                <option value={dep.department_id}>{dep.name}</option>
               {/each}
             </select>
           </div>

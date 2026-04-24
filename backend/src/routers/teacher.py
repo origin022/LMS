@@ -52,6 +52,22 @@ async def get_teacher_courses(
 ):
     return await TeacherService.get_teacher_courses(db, current_user.user_id)
 
+@router.get("/teacher/classrooms")
+@limiter.limit(DEFAULT_LIMIT)
+async def get_teacher_classrooms(
+    request: Request,
+    db: AsyncSession = Depends(get_session),
+    current_user = Depends(PermissionChecker(["manage corse"]))
+):
+    from src.models import Teacher_Assignment, Classroom
+    from sqlmodel import select
+    res = await db.exec(select(Teacher_Assignment).where(Teacher_Assignment.user_id == current_user.user_id))
+    assignment = res.first()
+    if not assignment:
+        return []
+    class_res = await db.exec(select(Classroom).where(Classroom.department_id == assignment.department_id))
+    return class_res.all()
+
 
 @router.delete("/teacher/courses/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit(SENSITIVE_LIMIT)

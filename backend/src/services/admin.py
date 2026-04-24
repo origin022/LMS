@@ -190,7 +190,7 @@ class AdminService:
             .options(
                 selectinload(User.roles),
                 selectinload(User.state),
-                selectinload(User.teacher_assignment).selectinload(Teacher_Assignment.classroom)
+                selectinload(User.teacher_assignment).selectinload(Teacher_Assignment.department)
             )
         )
     
@@ -213,7 +213,7 @@ class AdminService:
                 state_id=u.state_id,
                 state_name=u.state.name if u.state else "غير معروف",
                 created_at=u.created_at,
-                class_name=", ".join([ta.classroom.class_name for ta in u.teacher_assignment if ta.classroom]) if u.teacher_assignment else None
+                class_name=", ".join([ta.department.name for ta in u.teacher_assignment if ta.department]) if u.teacher_assignment else None
             ) for u in users
         ]
     

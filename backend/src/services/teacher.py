@@ -35,6 +35,9 @@ class TeacherService:
    
     @staticmethod
     async def create_course(db: AsyncSession, data: CourseCreate, user_id: int):
+        if not data.class_id:
+            raise HTTPException(status_code=400, detail="يجب تحديد الكلاس لإنشاء الكورس")
+            
         statement = select(Teacher_Assignment).where(Teacher_Assignment.user_id == user_id)
         result = await db.exec(statement)
         assignment = result.first()
@@ -42,12 +45,23 @@ class TeacherService:
         if not assignment:
             raise HTTPException(
                 status_code=403, 
-                detail="يجب أن تكون مرتبطاً بكلاس أولاً لإنشاء كورس"
+                detail="يجب أن تكون مرتبطاً بقسم أولاً لإنشاء كورس"
             )
+            
+        from src.models.Classroom import Classroom
+        class_stmt = select(Classroom).where(Classroom.class_id == data.class_id)
+        class_res = await db.exec(class_stmt)
+        classroom = class_res.first()
+
+        if not classroom:
+            raise HTTPException(status_code=404, detail="الكلاس غير موجود")
+        
+        if classroom.department_id != assignment.department_id:
+            raise HTTPException(status_code=403, detail="لا يمكنك النشر في هذا الكلاس لأنه لا يتبع لقسمك")
 
         new_course = Course(
             name=data.name,
-            class_id=assignment.class_id,
+            class_id=data.class_id,
             user_id=user_id
         )
     
@@ -262,10 +276,10 @@ class TeacherService:
 
     
     @staticmethod
-    async def assign_teacher_to_class(user_id: int, class_id: int, db: AsyncSession):
+    async def assign_teacher_to_class(user_id: int, department_id: int, db: AsyncSession):
         assignment = Teacher_Assignment(
             user_id=user_id,
-            class_id=class_id
+            department_id=department_id
         )
     
         try:
