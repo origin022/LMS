@@ -19,6 +19,9 @@
     Captions,
     CaptionsOff,
     Trash2,
+    Edit2,
+    X,
+    Check,
   } from "lucide-svelte";
 
   interface SubtitleSegment {
@@ -215,6 +218,50 @@ async function handleAutoEnroll() {
     }
   }
 
+  let editingCommentId: number | null = null;
+  let editingCommentText = "";
+  let updatingComment = false;
+
+  function cancelEdit() {
+    editingCommentId = null;
+    editingCommentText = "";
+  }
+
+  function startEdit(comment: any) {
+    editingCommentId = comment.comment_id;
+    editingCommentText = comment.text;
+  }
+
+  async function updateComment(id: number) {
+    if (!editingCommentText.trim() || updatingComment) return;
+    updatingComment = true;
+    try {
+      const res = await apiFetch(`/interactions/comment/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          text: editingCommentText
+        }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        // Update local comment list (if websocket doesn't already, but ws is better ignored for self-update of edit)
+        comments = comments.map(c => 
+          c.comment_id === id ? { ...c, text: updated.text } : c
+        );
+        editingCommentId = null;
+        editingCommentText = "";
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.detail || "فشل تحديث التعليق");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("خطأ في الاتصال بالسيرفر");
+    } finally {
+      updatingComment = false;
+    }
+  }
+
 // 1. جعل فتح الاتصال مرتبط بتغير الـ ID وإغلاق القديم تلقائياً
   let ws: WebSocket | null = null;
   let reconnectTimer: any;
@@ -333,11 +380,11 @@ $: if (Math.floor(currentTime) !== lastTime) {
           {/key}
 
           <div
-            class="absolute top-6 right-6 flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            class="absolute top-2 right-2 md:top-6 md:right-6 flex items-center gap-2 md:gap-3 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50"
           >
             <button
               on:click={() => (showSubtitles = !showSubtitles)}
-              class="p-3 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 text-white hover:bg-indigo-500 transition-all shadow-2xl"
+              class="p-2 md:p-3 rounded-xl md:rounded-2xl bg-black/50 md:bg-black/40 backdrop-blur-xl border border-white/10 text-white hover:bg-indigo-500 transition-all shadow-lg pointer-events-auto"
             >
               {#if showSubtitles}
                 <Captions size={20} />
@@ -348,7 +395,7 @@ $: if (Math.floor(currentTime) !== lastTime) {
 
             <button
               on:click={toggleFullscreen}
-              class="p-3 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 text-white hover:bg-indigo-500 transition-all shadow-2xl"
+              class="p-2 md:p-3 rounded-xl md:rounded-2xl bg-black/50 md:bg-black/40 backdrop-blur-xl border border-white/10 text-white hover:bg-indigo-500 transition-all shadow-lg pointer-events-auto"
             >
               <Maximize size={20} />
             </button>
@@ -356,13 +403,13 @@ $: if (Math.floor(currentTime) !== lastTime) {
 
           {#if activeSubtitle && showSubtitles}
             <div
-              class="absolute bottom-16 left-0 right-0 flex justify-center px-8 pointer-events-none transition-all duration-300"
+              class="absolute bottom-24 md:bottom-16 left-0 right-0 flex justify-center px-4 md:px-8 pointer-events-none transition-all duration-300 z-40"
             >
               <div
-                class="bg-black/60 backdrop-blur-lg border border-white/10 px-6 py-3 rounded-2xl shadow-2xl"
+                class="bg-black/70 backdrop-blur-lg border border-white/10 px-3 py-1.5 md:px-6 md:py-3 rounded-xl md:rounded-2xl shadow-2xl max-w-[90%]"
               >
                 <p
-                  class="text-white text-xl md:text-3xl font-bold text-center leading-snug drop-shadow-lg"
+                  class="text-white text-sm md:text-2xl font-bold text-center leading-relaxed drop-shadow-lg"
                 >
                   {activeSubtitle.text}
                 </p>
@@ -404,12 +451,7 @@ $: if (Math.floor(currentTime) !== lastTime) {
                   )}</span
                 >
               </div>
-              <div class="flex items-center gap-2 text-slate-400">
-                <div class="p-2 bg-emerald-500/10 rounded-lg">
-                  <BookOpen size={16} class="text-emerald-400" />
-                </div>
-                <span class="text-sm font-semibold">محاضرة تعليمية</span>
-              </div>
+
             </div>
           </div>
 
@@ -473,7 +515,7 @@ $: if (Math.floor(currentTime) !== lastTime) {
           <h3
             class="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-500"
           >
-            Description
+            الوصف
           </h3>
           <p class="text-slate-600 text-lg leading-relaxed max-w-4xl">
             {lecture.description || "لا يوجد وصف متوفر لهذه المحاضرة حالياً."}
@@ -559,7 +601,7 @@ $: if (Math.floor(currentTime) !== lastTime) {
                 <div class="flex-1 space-y-2">
                   <div class="flex justify-between items-center">
                     <a 
-                      href={$userStore.name && comment.user?.name?.trim().toLowerCase() === $userStore.name.trim().toLowerCase() ? '/profile' : `/profile/${comment.user_id}`} 
+                      href={$userStore.user_id && comment.user_id === $userStore.user_id ? '/profile' : `/profile/${comment.user_id}`} 
                       class="text-indigo-400 font-bold text-sm hover:underline cursor-pointer"
                     >
                       {comment.user?.name || "طالب مجهول"}
@@ -572,20 +614,63 @@ $: if (Math.floor(currentTime) !== lastTime) {
                       )}
                     </span>
                   </div>
-                  <p class="text-slate-700 leading-relaxed text-base">
-                    {comment.text}
-                  </p>
+                  
+                  {#if editingCommentId === comment.comment_id}
+                    <div class="mt-2 flex flex-col gap-2">
+                      <textarea
+                        bind:value={editingCommentText}
+                        class="w-full bg-white border border-slate-200 rounded-xl p-3 text-slate-800 resize-none outline-none focus:ring-2 ring-indigo-500/20"
+                        rows="3"
+                      ></textarea>
+                      <div class="flex justify-end gap-2">
+                        <button 
+                          on:click={cancelEdit}
+                          class="p-2 text-slate-500 hover:bg-slate-200 rounded-lg transition-all"
+                          title="إلغاء"
+                        >
+                          <X size={16} />
+                        </button>
+                        <button 
+                          on:click={() => updateComment(comment.comment_id)}
+                          disabled={updatingComment}
+                          class="p-2 bg-indigo-500 text-white hover:bg-indigo-600 rounded-lg transition-all disabled:opacity-50"
+                          title="حفظ"
+                        >
+                          {#if updatingComment}
+                            <Loader2 size={16} class="animate-spin" />
+                          {:else}
+                            <Check size={16} />
+                          {/if}
+                        </button>
+                      </div>
+                    </div>
+                  {:else}
+                    <p class="text-slate-700 leading-relaxed text-base">
+                      {comment.text}
+                    </p>
+                  {/if}
                 </div>
 
-                {#if $userStore.role?.toString().toLowerCase() === "manager"}
-                  <button
-                    on:click={() => deleteComment(comment.comment_id)}
-                    class="text-slate-300 hover:text-red-500 p-2 hover:bg-red-50 rounded-xl transition-all self-start"
-                    title="حذف التعليق"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                {/if}
+                <div class="flex flex-col gap-2">
+                  {#if $userStore.role?.toString().toLowerCase() === "manager"}
+                    <button
+                      on:click={() => deleteComment(comment.comment_id)}
+                      class="text-slate-300 hover:text-red-500 p-2 hover:bg-red-50 rounded-xl transition-all self-start"
+                      title="حذف التعليق"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  {/if}
+                  {#if $userStore.user_id === comment.user_id && editingCommentId !== comment.comment_id}
+                    <button
+                      on:click={() => startEdit(comment)}
+                      class="text-slate-300 hover:text-indigo-500 p-2 hover:bg-indigo-50 rounded-xl transition-all self-start"
+                      title="تعديل التعليق"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                  {/if}
+                </div>
               </div>
             </div>
           {:else}

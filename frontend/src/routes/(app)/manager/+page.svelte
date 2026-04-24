@@ -356,7 +356,7 @@
       class="fixed top-10 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-2xl font-black text-sm shadow-2xl
              {message.type === 'error'
         ? 'bg-red-500'
-        : 'bg-purple-600'} text-white"
+        : 'bg-blue-600'} text-white"
     >
       {message.text}
     </div>
@@ -371,7 +371,7 @@
           on:click={() => (activeTab = tab.id)}
           class="whitespace-nowrap px-6 py-3 rounded-2xl text-[11px] md:text-xs font-black transition-all flex-shrink-0
                {activeTab === tab.id
-            ? 'bg-purple-600 text-white shadow-lg shadow-purple-200'
+            ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
             : 'text-slate-400 hover:bg-slate-50 border border-transparent hover:border-slate-100'}"
         >
           {tab.label}
@@ -384,7 +384,7 @@
         <input
           bind:value={searchQuery}
           placeholder="بحث عن اسم أو إيميل..."
-          class="w-full pr-4 pl-4 py-2.5 bg-slate-50 border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-purple-500/20 text-right"
+          class="w-full pr-4 pl-4 py-2.5 bg-slate-50 border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500/20 text-right"
         />
       </div>
     {/if}
@@ -429,7 +429,7 @@
           filterStateId = "";
           searchQuery = "";
         }}
-        class="text-[10px] font-black text-purple-600 hover:underline"
+        class="text-[10px] font-black text-blue-600 hover:underline"
       >
         تصفير الفلاتر
       </button>
@@ -440,7 +440,7 @@
   {#if loading}
     <div class="flex justify-center py-24">
       <div
-        class="animate-spin rounded-full h-10 w-10 border-[3px] border-purple-600 border-t-transparent"
+        class="animate-spin rounded-full h-10 w-10 border-[3px] border-blue-600 border-t-transparent"
       ></div>
     </div>
   {:else if tabs.length === 0}
@@ -466,7 +466,7 @@
             {#if usersLoading}
               <div class="flex justify-center py-16">
                 <div
-                  class="animate-spin rounded-full h-8 w-8 border-[3px] border-purple-600 border-t-transparent"
+                  class="animate-spin rounded-full h-8 w-8 border-[3px] border-blue-600 border-t-transparent"
                 ></div>
               </div>
             {:else}
@@ -534,7 +534,7 @@
                             {u.state_name === "Active" ? "نشط" : "معطل"}
                           </span>
                           <div
-                            class="text-slate-300 group-hover/status:text-purple-500 transition-colors"
+                            class="text-slate-300 group-hover/status:text-blue-500 transition-colors"
                           >
                             {#if u.state_name === "Active"}
                               <ToggleRight size={20} />
@@ -589,11 +589,11 @@
                 bind:value={permSearchEmail}
                 type="text"
                 placeholder="البريد الإلكتروني للمستخدم"
-                class="flex-1 p-4 bg-slate-50 border-none rounded-2xl outline-none font-bold focus:ring-2 focus:ring-purple-500/20"
+                class="flex-1 p-4 bg-slate-50 border-none rounded-2xl outline-none font-bold focus:ring-2 focus:ring-blue-500/20"
               />
               <button
                 on:click={loadUserPermissions}
-                class="px-6 py-4 bg-purple-600 text-white rounded-2xl font-black text-sm hover:bg-purple-700 transition-all"
+                class="px-6 py-4 bg-blue-600 text-white rounded-2xl font-black text-sm hover:bg-blue-700 transition-all"
               >
                 بحث
               </button>
@@ -603,7 +603,7 @@
           {#if permDashLoading}
             <div class="flex justify-center py-12">
               <div
-                class="animate-spin rounded-full h-8 w-8 border-[3px] border-purple-600 border-t-transparent"
+                class="animate-spin rounded-full h-8 w-8 border-[3px] border-blue-600 border-t-transparent"
               ></div>
             </div>
           {:else if permDashboard}
@@ -615,7 +615,7 @@
                 class="flex items-center gap-4 mb-6 pb-6 border-b border-slate-50"
               >
                 <div
-                  class="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center font-black text-purple-600 text-sm"
+                  class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center font-black text-blue-600 text-sm"
                 >
                   {permDashboard.name.charAt(0)}
                 </div>
@@ -623,7 +623,7 @@
                   <div class="font-black text-slate-800">
                     {permDashboard.name}
                   </div>
-                  <div class="text-xs text-purple-500 font-bold">
+                  <div class="text-xs text-blue-500 font-bold">
                     {permDashboard.role_name}
                   </div>
                 </div>
@@ -677,7 +677,7 @@
             {#if commentsLoading}
               <div class="flex justify-center py-16">
                 <div
-                  class="animate-spin rounded-full h-8 w-8 border-[3px] border-purple-600 border-t-transparent"
+                  class="animate-spin rounded-full h-8 w-8 border-[3px] border-blue-600 border-t-transparent"
                 ></div>
               </div>
             {:else}
@@ -703,7 +703,7 @@
                         <div class="line-clamp-2" title={c.text}>{c.text}</div>
                       </td>
                       <td
-                        class="px-8 py-5 text-[10px] font-bold text-purple-600"
+                        class="px-8 py-5 text-[10px] font-bold text-blue-600"
                       >
                         {c.lecture_title}
                       </td>

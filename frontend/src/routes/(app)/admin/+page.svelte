@@ -102,7 +102,16 @@
         if (res.ok) roles = await res.json();
       } else if (activeTab === "roles") {
         const res = await apiFetch("/admin/permissions");
-        if (res.ok) permissions = await res.json();
+        if (res.ok) {
+          const data = await res.json();
+          const unique = new Map();
+          for (const item of data) {
+            if (!unique.has(item.name)) {
+              unique.set(item.name, item);
+            }
+          }
+          permissions = Array.from(unique.values());
+        }
       }
     } catch (e) {
       console.error(e);
