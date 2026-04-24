@@ -106,6 +106,7 @@ async def test_public_content(client: AsyncClient):
 
 # --- 9. TEACHER EXTRA OPERATIONS ---
 async def test_teacher_extra(client: AsyncClient):
+    assert (await client.get("/api/v1/teacher/classrooms")).status_code in [200, 401]
     assert (await client.get("/api/v1/teacher/courses")).status_code in [200, 401]
     assert (await client.patch("/api/v1/quizzes/1/bulk", json={"questions": []})).status_code in [200, 401, 404, 422]
     assert (

@@ -267,7 +267,7 @@ class AdminService:
        
     @staticmethod
     async def get_all_classrooms(db: AsyncSession):
-        statement = select(Classroom)
+        statement = select(Classroom).options(selectinload(Classroom.department))
         result = await db.exec(statement)
         return result.all()
 
