@@ -1,1 +1,18 @@
 @import "tailwindcss";
+
+@layer base {
+  html {
+    /* موازنة الحجم ليكون كبيراً ولكن بنسب متناسقة */
+    font-size: 18.5px; 
+  }
+
+  body {
+    @apply antialiased;
+    line-height: 1.6;
+  }
+}
+
+/* Login container style */
+.login-container {
+  @apply bg-white w-[27rem] py-8 px-9 rounded-[2.5rem] shadow-2xl shadow-gray-200/50 text-center border border-gray-100;
+}

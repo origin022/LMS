@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { apiFetch } from "$lib/api";
+  import { apiFetch, FILE_URL } from "$lib/api";
   import { fly, fade } from "svelte/transition";
   import { Trash2, ToggleLeft, ToggleRight } from "lucide-svelte";
 
@@ -30,6 +30,7 @@
   interface Classroom {
     class_id: number;
     class_name: string;
+    class_image?: string;
     department_id?: number;
     department_name?: string;
   }
@@ -39,7 +40,8 @@
     name: string;
   }
 
-  let activeTab: "classrooms" | "users" | "invites" | "roles" = "classrooms";
+  let activeTab: "departments" | "classrooms" | "users" | "invites" | "roles" =
+    "departments";
   let userSubTab: "normal" | "managers" = "normal";
   let loading = false;
 
@@ -73,19 +75,20 @@
   async function loadData(silent = false) {
     if (!silent) loading = true;
     try {
-      if (activeTab === "classrooms") {
+      if (activeTab === "departments") {
+        const res = await apiFetch("/admin/departments");
+        if (res.ok) departments = await res.json();
+      } else if (activeTab === "classrooms") {
         const [cRes, dRes] = await Promise.all([
           apiFetch("/admin/classrooms/all"),
-          apiFetch("/admin/departments")
+          apiFetch("/admin/departments"),
         ]);
         if (cRes.ok) {
           classrooms = (await cRes.json()).sort(
             (a: any, b: any) => b.class_id - a.class_id,
           );
         }
-        if (dRes.ok) {
-          departments = await dRes.json();
-        }
+        if (dRes.ok) departments = await dRes.json();
       } else if (activeTab === "users") {
         const params = new URLSearchParams();
         if (filterRoleId) params.append("roles_id", filterRoleId.toString());
@@ -332,8 +335,10 @@
   <div
     class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-[2.5rem] shadow-sm border border-slate-100"
   >
-    <div class="flex gap-3 overflow-x-auto no-scrollbar w-full pb-2 px-2 scroll-smooth">
-      {#each [["classrooms", "المجالات"], ["users", "المستخدمين"], ["invites", "الدعوات"], ["roles", "رتبة"]] as [id, label]}
+    <div
+      class="flex gap-3 overflow-x-auto no-scrollbar w-full pb-2 px-2 scroll-smooth"
+    >
+      {#each [["departments", "الأقسام"], ["classrooms", "المجالات الدراسية"], ["users", "المستخدمين"], ["invites", "الدعوات"], ["roles", "إدارة الرتب"]] as [id, label]}
         <button
           on:click={() => (activeTab = id as any)}
           class="whitespace-nowrap px-6 py-3 rounded-2xl text-[11px] md:text-xs font-black transition-all flex-shrink-0 {activeTab ===
@@ -414,20 +419,6 @@
     </div>
   {/if}
 
-  {#if activeTab === "classrooms"}
-    <div class="flex flex-wrap gap-3 items-center mb-6" in:fade>
-      <select
-        bind:value={filterClassDeptId}
-        class="bg-white border border-slate-100 px-4 py-2 rounded-xl text-[10px] font-black text-slate-500 outline-none"
-      >
-        <option value="">جميع الأقسام</option>
-        {#each departments as dept}
-          <option value={String(dept.department_id)}>{dept.name}</option>
-        {/each}
-      </select>
-    </div>
-  {/if}
-
   {#if loading}
     <div class="flex justify-center py-20">
       <div
@@ -436,148 +427,421 @@
     </div>
   {:else}
     <div in:fly={{ y: 10 }}>
-      {#if activeTab === "classrooms"}
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div
-            class="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm h-fit"
-          >
-            <h3 class="text-xl font-black mb-8 text-slate-800">
-              إضافة مجال دراسي جديد
-            </h3>
-
-            <div class="space-y-4">
-              <input
-                bind:value={newClassName}
-                placeholder="اسم المادة"
-                class="w-full p-5 bg-slate-50 border-none rounded-3xl outline-none font-bold focus:ring-2 focus:ring-blue-500/20"
-              />
-
-              <div class="relative">
-                <select
-                  bind:value={selectedDeptId}
-                  class="w-full p-5 bg-slate-50 border-none rounded-3xl outline-none font-bold focus:ring-2 focus:ring-blue-500/20 text-slate-500"
-                >
-                  <option value="">اختر القسم (اختياري)</option>
-                  {#each departments as dept}
-                    <option value={String(dept.department_id)}>{dept.name}</option>
-                  {/each}
-                </select>
-
-                <input
-                  type="file"
-                  accept="image/*"
-                  on:change={handleFileChange}
-                  bind:this={fileInput}
-                  class="hidden"
-                  id="class-image"
-                />
-                <label
-                  for="class-image"
-                  class="flex items-center justify-between w-full p-5 bg-slate-50 rounded-3xl cursor-pointer hover:bg-slate-100 transition-colors border-2 border-dashed border-slate-200"
-                >
-                  <span class="text-xs font-black text-slate-500">
-                    {selectedFile
-                      ? selectedFile.name
-                      : "اختر صورة مصغرة (اختياري)"}
-                  </span>
-                  <div class="bg-white p-2 rounded-xl shadow-sm">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      class="text-blue-600"
-                      ><rect
-                        width="18"
-                        height="18"
-                        x="3"
-                        y="3"
-                        rx="2"
-                        ry="2"
-                      /><circle cx="9" cy="9" r="2" /><path
-                        d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
-                      /></svg
-                    >
-                  </div>
-                </label>
-              </div>
-
-              <button
-                on:click={createClass}
-                disabled={loading}
-                class="w-full py-5 bg-blue-600 text-white rounded-3xl font-black shadow-xl hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+      {#if activeTab === "departments"}
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8" in:fade>
+          <!-- Create Dept Card -->
+          <div class="lg:col-span-5">
+            <div
+              class="bg-white p-8 md:p-12 rounded-[3.5rem] border border-slate-100 shadow-xl shadow-blue-500/5 sticky top-8"
+            >
+              <div
+                class="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-6"
               >
-                {#if loading}
-                  جاري الحفظ...
-                {:else}
-                  تأكيد الحفظ
-                {/if}
-              </button>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="text-blue-600"
+                  ><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle
+                    cx="9"
+                    cy="7"
+                    r="4"
+                  /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path
+                    d="M16 3.13a4 4 0 0 1 0 7.75"
+                  /></svg
+                >
+              </div>
+              <h3 class="text-2xl font-black text-slate-800 mb-2">
+                إضافة قسم جديد
+              </h3>
+              <p class="text-xs font-bold text-slate-400 mb-8 leading-relaxed">
+                قم بإنشاء الأقسام الرئيسية لتنظيم المجالات الدراسية بداخلها.
+              </p>
+
+              <div class="space-y-4">
+                <div class="relative group">
+                  <input
+                    bind:value={newDeptName}
+                    placeholder="اسم القسم (مثال: الفرع العلمي)"
+                    class="w-full p-5 bg-slate-50 border-2 border-transparent rounded-3xl outline-none font-bold transition-all focus:bg-white focus:border-blue-500/20 text-slate-700"
+                  />
+                </div>
+                <button
+                  on:click={createDept}
+                  class="w-full py-5 bg-blue-600 text-white rounded-3xl font-black shadow-xl shadow-blue-600/20 hover:bg-blue-700 hover:scale-[1.02] transition-all active:scale-95 flex items-center justify-center gap-3"
+                >
+                  <span>تأكيد الإضافة</span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    ><path d="M5 12h14" /><path d="M12 5v14" /></svg
+                  >
+                </button>
+              </div>
             </div>
           </div>
 
-            <div class="space-y-4">
-              <div class="bg-blue-50 p-6 rounded-[2.5rem] mb-6">
-                <h4 class="text-sm font-black mb-4 text-blue-800">إدارة الأقسام</h4>
-                <div class="flex gap-2 mb-4">
-                  <input
-                    bind:value={newDeptName}
-                    placeholder="اسم قسم جديد (علمي...)"
-                    class="flex-1 px-4 py-2 rounded-xl text-xs font-bold outline-none border-none focus:ring-2 focus:ring-blue-500/20"
-                  />
-                  <button
-                    on:click={createDept}
-                    class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black shadow-md hover:bg-blue-700 transition-all"
-                  >
-                    إضافة
-                  </button>
-                </div>
-                <div class="flex flex-wrap gap-2">
-                  {#each departments as dept}
-                    <div class="bg-white px-3 py-1.5 rounded-xl flex items-center gap-2 group border border-blue-100">
-                      <span class="text-[10px] font-black text-blue-600">{dept.name}</span>
-                      <button 
-                        on:click={() => deleteDept(dept.department_id)}
-                        class="text-slate-300 hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  {/each}
-                </div>
-              </div>
+          <!-- Dept List -->
+          <div class="lg:col-span-7 space-y-4">
+            <div class="flex items-center justify-between px-4 mb-2">
+              <h4
+                class="text-xs font-black text-slate-400 uppercase tracking-widest"
+              >
+                الأقسام المتاحة حالياً
+              </h4>
+              <span
+                class="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black"
+                >{departments.length} أقسام</span
+              >
+            </div>
 
-              {#each filteredClassrooms as cls}
+            <div class="grid grid-cols-1 gap-4">
+              {#each departments as dept}
                 <div
-                  class="bg-white p-6 rounded-[2.5rem] border border-slate-100 flex justify-between items-center group hover:border-blue-200 transition-all shadow-sm"
+                  in:fly={{ y: 10, delay: 50 }}
+                  class="bg-white p-6 rounded-[2.5rem] border border-slate-100 flex justify-between items-center group hover:border-blue-200 transition-all shadow-sm hover:shadow-md"
                 >
                   <div class="flex items-center gap-5">
                     <div
-                      class="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center font-black uppercase text-[10px]"
+                      class="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-lg shadow-blue-500/20"
                     >
-                      ID
+                      {dept.name[0]}
                     </div>
                     <div class="flex flex-col">
-                      <span class="font-black text-slate-700">{cls.class_name}</span>
-                      {#if cls.department_name}
-                        <span class="text-[9px] font-black text-blue-400">{cls.department_name}</span>
-                      {/if}
+                      <span
+                        class="font-black text-slate-800 text-lg leading-none"
+                        >{dept.name}</span
+                      >
                     </div>
                   </div>
 
-                <button
-                  on:click={() => deleteClass(cls.class_id)}
-                  class="text-slate-300 hover:text-red-500 p-2 hover:bg-red-50 rounded-xl transition-all"
+                  <button
+                    on:click={() => deleteDept(dept.department_id)}
+                    class="w-12 h-12 flex items-center justify-center bg-slate-50 text-slate-300 hover:bg-red-50 hover:text-red-500 rounded-2xl transition-all active:scale-90"
+                    title="حذف القسم"
+                  >
+                    <Trash2 size={20} strokeWidth={2.5} />
+                  </button>
+                </div>
+              {:else}
+                <div
+                  class="py-20 text-center bg-white rounded-[3.5rem] border border-dashed border-slate-200"
                 >
-                  <Trash2 size={20} strokeWidth={2.5} />
+                  <div
+                    class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="32"
+                      height="32"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      class="text-slate-300"
+                      ><path
+                        d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+                      /><circle cx="9" cy="7" r="4" /><path
+                        d="m16 11 5 5"
+                      /><path d="m11 16 5 5" /></svg
+                    >
+                  </div>
+                  <p class="text-slate-400 font-bold">
+                    لا يوجد أقسام مضافة بعد
+                  </p>
+                </div>
+              {/each}
+            </div>
+          </div>
+        </div>
+      {:else if activeTab === "classrooms"}
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8" in:fade>
+          <!-- Create Classroom Card -->
+          <div class="lg:col-span-5">
+            <div
+              class="bg-white p-8 md:p-12 rounded-[3.5rem] border border-slate-100 shadow-xl shadow-blue-500/5 sticky top-8"
+            >
+              <div
+                class="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-6"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="text-blue-600"
+                  ><rect
+                    x="3"
+                    y="3"
+                    width="18"
+                    height="18"
+                    rx="2"
+                    ry="2"
+                  /><line x1="3" y1="9" x2="21" y2="9" /><line
+                    x1="9"
+                    y1="21"
+                    x2="9"
+                    y2="9"
+                  /></svg
+                >
+              </div>
+              <h3 class="text-2xl font-black text-slate-800 mb-2">
+                إضافة مجال دراسي
+              </h3>
+              <p class="text-xs font-bold text-slate-400 mb-8 leading-relaxed">
+                قم بإنشاء مجال دراسي جديد (مثل مادة الرياضيات) وربطه بقسم معين.
+              </p>
+
+              <div class="space-y-5">
+                <div class="space-y-2">
+                  <label
+                    class="text-[10px] font-black text-slate-400 mr-2 uppercase tracking-widest"
+                    >اسم المادة</label
+                  >
+                  <input
+                    bind:value={newClassName}
+                    placeholder="مثال: اللغة العربية"
+                    class="w-full p-5 bg-slate-50 border-2 border-transparent rounded-3xl outline-none font-bold transition-all focus:bg-white focus:border-blue-500/20 text-slate-700"
+                  />
+                </div>
+
+                <div class="space-y-2">
+                  <label
+                    class="text-[10px] font-black text-slate-400 mr-2 uppercase tracking-widest"
+                    >القسم التابع له</label
+                  >
+                  <select
+                    bind:value={selectedDeptId}
+                    class="w-full p-5 bg-slate-50 border-2 border-transparent rounded-3xl outline-none font-bold transition-all focus:bg-white focus:border-blue-500/20 text-slate-500 appearance-none cursor-pointer"
+                  >
+                    <option value="">غير مرتبط بقسم</option>
+                    {#each departments as dept}
+                      <option value={String(dept.department_id)}
+                        >{dept.name}</option
+                      >
+                    {/each}
+                  </select>
+                </div>
+
+                <div class="space-y-2">
+                  <label
+                    class="text-[10px] font-black text-slate-400 mr-2 uppercase tracking-widest"
+                    >صورة الغلاف</label
+                  >
+                  <input
+                    type="file"
+                    accept="image/*"
+                    on:change={handleFileChange}
+                    bind:this={fileInput}
+                    class="hidden"
+                    id="class-image"
+                  />
+                  <label
+                    for="class-image"
+                    class="flex items-center justify-between w-full p-5 bg-slate-50 rounded-3xl cursor-pointer hover:bg-slate-100 transition-all border-2 border-dashed border-slate-200 group/file"
+                  >
+                    <span
+                      class="text-xs font-bold text-slate-500 truncate max-w-[200px]"
+                    >
+                      {selectedFile
+                        ? selectedFile.name
+                        : "اختر صورة جذابة للمجال"}
+                    </span>
+                    <div
+                      class="bg-white p-2 rounded-xl shadow-sm group-hover/file:scale-110 transition-transform"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="text-blue-600"
+                        ><rect
+                          width="18"
+                          height="18"
+                          x="3"
+                          y="3"
+                          rx="2"
+                          ry="2"
+                        /><circle cx="9" cy="9" r="2" /><path
+                          d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+                        /></svg
+                      >
+                    </div>
+                  </label>
+                </div>
+
+                <button
+                  on:click={createClass}
+                  disabled={loading}
+                  class="w-full py-5 bg-blue-600 text-white rounded-3xl font-black shadow-xl shadow-blue-600/20 hover:bg-blue-700 hover:scale-[1.02] transition-all active:scale-95 flex items-center justify-center gap-3 mt-4"
+                >
+                  {#if loading}
+                    <div
+                      class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"
+                    ></div>
+                    <span>جاري الإنشاء...</span>
+                  {:else}
+                    <span>تأكيد الحفظ</span>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="3"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"><path d="M5 13l4 4L19 7" /></svg
+                    >
+                  {/if}
                 </button>
               </div>
-            {/each}
+            </div>
+          </div>
+
+          <!-- Classroom List -->
+          <div class="lg:col-span-7 space-y-6">
+            <div
+              class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 bg-white/50 p-6 rounded-[2.5rem] border border-slate-100"
+            >
+              <div class="flex flex-col">
+                <h4 class="text-sm font-black text-slate-800">
+                  تصفية المجالات
+                </h4>
+                <p class="text-[10px] font-bold text-slate-400">
+                  عرض المجالات حسب القسم المختار
+                </p>
+              </div>
+              <select
+                bind:value={filterClassDeptId}
+                class="bg-white border-none shadow-sm px-6 py-3 rounded-2xl text-xs font-black text-blue-600 outline-none focus:ring-2 ring-blue-500/10"
+              >
+                <option value="">جميع المجالات</option>
+                {#each departments as dept}
+                  <option value={String(dept.department_id)}>{dept.name}</option
+                  >
+                {/each}
+              </select>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4">
+              {#each filteredClassrooms as cls}
+                <div
+                  in:fly={{ y: 20, delay: 100 }}
+                  class="bg-white p-5 rounded-[2.5rem] border border-slate-100 flex items-center gap-5 group hover:border-blue-200 transition-all shadow-sm hover:shadow-xl hover:shadow-blue-500/5"
+                >
+                  <div
+                    class="w-20 h-20 bg-blue-50 rounded-[1.75rem] overflow-hidden flex-shrink-0 border border-slate-50 relative group-hover:scale-105 transition-transform duration-500"
+                  >
+                    {#if cls.class_image}
+                      <img
+                        src={cls.class_image.startsWith('http') ? cls.class_image : FILE_URL + cls.class_image}
+                        alt={cls.class_name}
+                        class="w-full h-full object-cover"
+                      />
+                    {:else}
+                      <div
+                        class="w-full h-full flex items-center justify-center text-blue-300"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="32"
+                          height="32"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          class="opacity-40"
+                          ><path
+                            d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"
+                          /><path d="M8 7h6" /><path d="M8 11h8" /></svg
+                        >
+                      </div>
+                    {/if}
+                    <div
+                      class="absolute inset-0 bg-blue-600/0 group-hover:bg-blue-600/10 transition-colors"
+                    ></div>
+                  </div>
+
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span
+                        class="font-black text-slate-800 text-lg leading-tight"
+                        >{cls.class_name}</span
+                      >
+                    </div>
+                  </div>
+
+                  <button
+                    on:click={() => deleteClass(cls.class_id)}
+                    class="w-12 h-12 flex items-center justify-center text-slate-200 hover:bg-red-50 hover:text-red-500 rounded-2xl transition-all group-hover:text-slate-300"
+                    title="حذف المجال"
+                  >
+                    <Trash2 size={22} strokeWidth={2.5} />
+                  </button>
+                </div>
+              {:else}
+                <div
+                  class="py-24 text-center bg-white rounded-[3.5rem] border border-dashed border-slate-200"
+                >
+                  <div
+                    class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="32"
+                      height="32"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      class="text-slate-300"
+                      ><circle cx="12" cy="12" r="10" /><path
+                        d="M12 8v8"
+                      /><path d="M8 12h8" /></svg
+                    >
+                  </div>
+                  <p class="text-slate-500 font-bold">
+                    لا يوجد مجالات دراسية في هذا القسم حالياً
+                  </p>
+                  <button
+                    on:click={() => (filterClassDeptId = "")}
+                    class="mt-4 text-xs font-black text-blue-600 hover:underline"
+                    >عرض كل المجالات</button
+                  >
+                </div>
+              {/each}
+            </div>
           </div>
         </div>
       {:else if activeTab === "users"}

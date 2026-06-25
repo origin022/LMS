@@ -23,7 +23,6 @@ async def get_current_user(
     
 
 
-    # Try to get token from cookies or Authorization header
     token = request.cookies.get("access_token")
     
     if not token:

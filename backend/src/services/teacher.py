@@ -335,43 +335,95 @@ class TeacherService:
 
     @staticmethod
     async def process_video_transcription(lecture_id: int, file_path: str):
+        import subprocess
+        from pydub import AudioSegment
+        import tempfile
+
+        temp_dir = tempfile.mkdtemp()
         try:
-            abs_path = os.path.abspath(file_path)
-            if not os.path.exists(abs_path):
+            abs_video_path = os.path.abspath(file_path)
+            if not os.path.exists(abs_video_path):
+                print(f"❌ Video file not found: {abs_video_path}")
                 return
 
-            def sync_transcribe():
-                with open(abs_path, "rb") as file:
-                    return groq_client.audio.transcriptions.create(
-                        file=(os.path.basename(abs_path), file.read()),
-                        model="whisper-large-v3",
-                        language="ar",
-                        response_format="verbose_json", 
-                    )
-
-            transcribed_data = await anyio.to_thread.run_sync(sync_transcribe)
-
-            async with AsyncSession(engine) as db:
-                statement = select(Lecture).where(Lecture.lecture_id == lecture_id)
-                res = await db.exec(statement)
-                lecture = res.first()
+            # Step 1: Extract Audio using FFmpeg
+            audio_path = os.path.join(temp_dir, "extracted_audio.mp3")
+            print(f"🎬 Extracting audio from {abs_video_path}...")
             
-                if lecture:
-                    subtitles = []
+            # Using mono and 48k bitrate to keep file size small but quality high enough for Whisper
+            ffmpeg_cmd = [
+                "ffmpeg", "-i", abs_video_path,
+                "-vn", "-acodec", "libmp3lame", "-ac", "1", "-ab", "48k", "-ar", "16000",
+                "-y", audio_path
+            ]
+            
+            process = await anyio.to_thread.run_sync(
+                lambda: subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
+            )
+
+            if process.returncode != 0:
+                print(f"❌ FFmpeg error: {process.stderr}")
+                return
+
+            audio = AudioSegment.from_mp3(audio_path)
+            duration_ms = len(audio)
+            print(f"📊 Audio duration: {duration_ms / 1000:.2f} seconds")
+
+            # Groq limit is 25MB. 48kbps mono is roughly 22MB per hour.
+            # But let's chunk every 15 minutes to be safe and avoid any timeouts.
+            chunk_length_ms = 15 * 60 * 1000 
+            all_subtitles = []
+
+            for i in range(0, duration_ms, chunk_length_ms):
+                chunk = audio[i:i + chunk_length_ms]
+                chunk_path = os.path.join(temp_dir, f"chunk_{i}.mp3")
+                chunk.export(chunk_path, format="mp3")
+                
+                print(f"🎙️ Transcribing chunk {i//chunk_length_ms + 1}...")
+
+                def sync_transcribe(path):
+                    with open(path, "rb") as file:
+                        return groq_client.audio.transcriptions.create(
+                            file=(os.path.basename(path), file.read()),
+                            model="whisper-large-v3",
+                            language="ar",
+                            response_format="verbose_json",
+                        )
+
+                try:
+                    transcribed_data = await anyio.to_thread.run_sync(sync_transcribe, chunk_path)
+                    
+                    offset = i / 1000.0
                     if hasattr(transcribed_data, 'segments'):
                         for segment in transcribed_data.segments:
-                            subtitles.append({
-                                "start": segment['start'],
-                                "end": segment['end'],
+                            all_subtitles.append({
+                                "start": segment['start'] + offset,
+                                "end": segment['end'] + offset,
                                 "text": segment['text']
                             })
+                except Exception as e:
+                    print(f"❌ Chunk transcription error: {str(e)}")
+                    # Continue with next chunks even if one fails
+
+            if all_subtitles:
+                async with AsyncSession(engine) as db:
+                    statement = select(Lecture).where(Lecture.lecture_id == lecture_id)
+                    res = await db.exec(statement)
+                    lecture = res.first()
                 
-                    lecture.text = json.dumps(subtitles, ensure_ascii=False)
-                    await db.commit()
-                    print(f"✅ تم تحديث الترجمة المتزامنة للمحاضرة {lecture_id}")
+                    if lecture:
+                        lecture.text = json.dumps(all_subtitles, ensure_ascii=False)
+                        await db.commit()
+                        print(f"✅ Successfully updated transcription for lecture {lecture_id} ({len(all_subtitles)} segments)")
 
         except Exception as e:
-            print(f"❌ خطأ معالجة الصوت: {str(e)}")
+            print(f"❌ Transcription processing error: {str(e)}")
+        finally:
+            try:
+                shutil.rmtree(temp_dir)
+            except:
+                pass
+
 
 
 
@@ -515,11 +567,15 @@ class TeacherService:
                         "role": "system",
                         "content": (
                             "You are an expert educator. Generate exactly 15 MCQ questions from the text provided. "
+                            "The language of the questions and options MUST match the language of the provided text (Arabic by default). "
                             "Distribution: 5 Easy (Level 1), 5 Medium (Level 2), 5 Hard (Level 3). "
                             "Each question must have exactly 4 options. "
+                            "CRITICAL: The options must be meaningful, distinct, and derived directly from the provided text. "
+                            "CRITICAL: Randomize the position of the correct answer among the 4 options for every question. Do NOT consistently place the correct answer as the first option. "
+                            "CRITICAL: Do NOT use placeholder text like 'a', 'b', 'c', 'd', or any other generic labels. "
                             "Return ONLY a JSON object with this exact structure: "
-                            "{\"questions\": [{\"question_text\": \"string\", \"difficulty\": 1, \"tag\": \"string\", "
-                            "\"options\": [{\"option_text\": \"string\", \"is_correct\": bool}]}]}"
+                            "{\"questions\": [{\"question_text\": \"...\", \"difficulty\": 1, \"tag\": \"...\", "
+                            "\"options\": [{\"option_text\": \"...\", \"is_correct\": bool}]}]}"
                         )
                     },
                     {

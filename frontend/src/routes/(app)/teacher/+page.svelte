@@ -243,11 +243,11 @@
     </div>
   {/if}
 
-  <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
+  <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 text-center">
     <h1 class="text-2xl font-black text-slate-800">لوحة الأستاذ</h1>
     <p class="text-slate-400 text-xs font-bold mt-1">
       إنشاء الكورسات ونشر المحاضرات
-    </p>
+    </p> 
   </div>
 
   <div class="flex gap-3">
@@ -258,7 +258,7 @@
         ? 'bg-blue-600 text-white shadow-lg'
         : 'bg-white text-slate-500 border border-slate-100'}"
     >
-      📢 نشر محاضرة
+     نشر محاضرة
     </button>
     <button
       on:click={() => (activeTab = "create-course")}
@@ -267,7 +267,7 @@
         ? 'bg-blue-600 text-white shadow-lg'
         : 'bg-white text-slate-500 border border-slate-100'}"
     >
-      📚 إنشاء كورس
+     إنشاء كورس
     </button>
   </div>
 

@@ -54,7 +54,7 @@
 
 {#if show}
   <div
-    class="fixed inset-0 z-[100] grid place-items-center p-4 md:p-6 bg-slate-950/40 backdrop-blur-[2px]"
+    class="fixed inset-0 z-100 grid place-items-center p-4 md:p-6 bg-slate-950/40 backdrop-blur-[2px]"
     on:click={close}
     on:keydown={(e) => e.key === "Escape" && close()}
     role="button"

@@ -133,7 +133,7 @@ class AssignClassSchema(BaseModel):
     user_id: int
 
 class GeneratedOption(BaseModel):
-    option_test: str
+    option_text: str
     is_correct: bool
 
 class GeneratedQuestion(BaseModel):

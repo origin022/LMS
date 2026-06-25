@@ -27,7 +27,5 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
             detail="Database service is temporarily unavailable."
         )
     except Exception:
-        # Re-raise any other exceptions (like RateLimitExceeded) 
-        # so they can be handled by their specific handlers
         raise
 
